@@ -7,8 +7,10 @@ import Register from "./pages/Register/Register";
 import Crossword from "./pages/Crossword/Crossword";
 import CrosswordMUI from "./pages/Crossword/CrosswordMUI";
 import QuizMUI from "./pages/QuizGame/QuizMUI";
+import WordSearch from "./pages/WordSearch/WordSearch";
 import Login from "./pages/Login/Login";
 import NavBar from "./components/NavBar/NavBar";
+import { useAuth } from "./context/AuthContext";
 import Landing from "./pages/Landing/Landing";
 import { Toolbar } from "@mui/material";
 import AdminSettings from "./pages/Admin/AdminSettings";
@@ -24,8 +26,8 @@ export default function App() {
       {/* <Toolbar /> */}
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/quiz" element={<QuizMUI />} />
-        <Route path="/game" element={<CrosswordMUI />} />
+        {/* <Route path="/quiz" element={<QuizMUI />} /> */}
+        {/* <Route path="/game" element={<CrosswordMUI />} /> */}
         <Route path="/login" element={<Login />} />
         <Route path="/ap-admin/setting" element={<AdminSettings />} />
 
@@ -49,6 +51,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <CrosswordMUI />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/wordsearch"
+          element={
+            <PrivateRoute>
+              <WordSearch />
             </PrivateRoute>
           }
         />

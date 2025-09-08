@@ -143,17 +143,37 @@ export default function DailyQuiz({
       setError("Missing user UUID");
       return;
     }
+
+    // Prevent multiple submissions
+    if (submitting || submittedScore !== null) {
+      return;
+    }
+
+    // Rate limiting: prevent rapid submissions
+    const lastSubmitKey = `ap_quiz_last_submit_${currentDay}`;
+    const lastSubmit = localStorage.getItem(lastSubmitKey);
+    const now = Date.now();
+    if (lastSubmit && now - parseInt(lastSubmit) < 5000) {
+      // 5 second cooldown
+      setError("Please wait before submitting again");
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError("");
+
+      // Validate score (prevent negative or unreasonably high scores)
+      const validatedScore = Math.max(0, Math.min(score, 1000)); // reasonable bounds
+
       const res = await fetch(`${baseUrl}/api/asian-paint/score`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          uuid,
+          uuid: uuid.replace(/[^a-zA-Z0-9-_]/g, ""), // sanitize UUID
           game: "quiz",
-          day: currentDay,
-          points: score,
+          day: currentDay.replace(/[^a-zA-Z0-9]/g, ""), // sanitize day
+          points: validatedScore,
         }),
       });
       if (!res.ok) {
@@ -162,7 +182,8 @@ export default function DailyQuiz({
           "Failed to save score";
         throw new Error(msg);
       }
-      setSubmittedScore(score);
+      setSubmittedScore(validatedScore);
+      localStorage.setItem(lastSubmitKey, now.toString());
     } catch (e) {
       setError(e.message || "Failed to save score");
     } finally {
@@ -213,19 +234,32 @@ export default function DailyQuiz({
 
       {(loading || loadingQuiz) && (
         <Stack alignItems="center" sx={{ py: 6 }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }} variant="body2">
-            Loading quiz…
+          <CircularProgress size={60} />
+          <Typography sx={{ mt: 2 }} variant="body2" color="text.secondary">
+            {loading ? "Loading settings…" : "Loading quiz…"}
+          </Typography>
+          <Typography sx={{ mt: 1 }} variant="caption" color="text.secondary">
+            Please wait while we prepare your questions
           </Typography>
         </Stack>
       )}
 
       {!loading && !loadingQuiz && error && (
-        <Stack spacing={2} sx={{ py: 4 }}>
+        <Stack spacing={2} sx={{ py: 4, alignItems: "center" }}>
+          <Typography color="error" variant="h6">
+            Oops! Something went wrong
+          </Typography>
           <Typography color="error">{error}</Typography>
-          <Typography variant="body2">
+          <Typography variant="body2" color="text.secondary">
             Try switching the day or come back later.
           </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => window.location.reload()}
+            sx={{ mt: 2 }}
+          >
+            Retry
+          </Button>
         </Stack>
       )}
 

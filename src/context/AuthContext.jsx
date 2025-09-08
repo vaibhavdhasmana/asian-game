@@ -56,6 +56,10 @@ export function AuthProvider({ children }) {
   const login = (userObj) => {
     setUser(userObj);
     localStorage.setItem(LS_USER, JSON.stringify(userObj));
+    // Also store UUID separately for fallback access
+    if (userObj?.uuid) {
+      localStorage.setItem("ap_uuid", userObj.uuid);
+    }
   };
 
   const logout = () => {
