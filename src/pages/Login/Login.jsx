@@ -72,11 +72,11 @@ export default function Login() {
             sx={{ mb: 3 }}
           />
 
-          <Box sx={{ mt: 1 }}>
-            <Link component="button" type="button" underline="hover">
-              Forgot password?
+          {/* <Box sx={{ mt: 1 }}>
+            <Link component="button" type="button"  underline="hover">
+              Register
             </Link>
-          </Box>
+          </Box> */}
 
           {error && (
             <Typography color="error" sx={{ mt: 1 }}>

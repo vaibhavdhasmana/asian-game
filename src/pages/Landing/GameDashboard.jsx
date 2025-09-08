@@ -11,6 +11,10 @@ import useGameSettings from "../../hooks/useGameSettings";
 import { useAuth } from "../../context/AuthContext";
 import QuizTile from "../QuizGame/QuizTile";
 import quizIcon from "../../assets/quizicon.png";
+import wordSearchIcon from "../../assets/wordSearchIcon.png";
+import selfieIcon from "../../assets/selfieIcon.png";
+import crossword from "../../assets/crossword.png";
+
 const QUIZ_DONE_KEY = "ap_quiz_day1_completed";
 export default function GameDashboard() {
   const navigate = useNavigate();
@@ -78,6 +82,7 @@ export default function GameDashboard() {
           width: "100%",
           gap: "20px",
           px: "16px",
+          flexWrap: "wrap",
           position: { md: "absolute", xs: "absolute" },
           top: { xs: "30%", md: "30%" },
           left: { xs: 0, md: 0 },
@@ -112,7 +117,104 @@ export default function GameDashboard() {
             variant="h6"
             fontWeight={700}
           >
-            Play
+            Quiz
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flexDirection: "column",
+            gap: "10px",
+            width: { xs: "140px", sm: "160px", md: "180px" },
+            padding: "18px",
+            background: "#FF3DF1",
+            borderRadius: "14px",
+          }}
+          onClick={() => {
+            navigate("/wordSearch");
+          }}
+        >
+          <Box
+            component="img"
+            src={wordSearchIcon}
+            alt="Event Title"
+            sx={{
+              width: { xs: "80%", sm: "90%", md: "85%" },
+            }}
+          />
+          <Typography
+            sx={{ textAlign: "center", whiteSpace: "nowrap" }}
+            variant="h6"
+            fontWeight={700}
+          >
+            Word Search
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flexDirection: "column",
+            gap: "10px",
+            width: { xs: "140px", sm: "160px", md: "180px" },
+            padding: "18px",
+            background: "#FF3DF1",
+            borderRadius: "14px",
+          }}
+          onClick={() => {
+            navigate("/selfie");
+          }}
+        >
+          <Box
+            component="img"
+            src={selfieIcon}
+            alt="Event Title"
+            sx={{
+              width: { xs: "80%", sm: "90%", md: "85%" },
+            }}
+          />
+          <Typography
+            sx={{ textAlign: "center", whiteSpace: "nowrap" }}
+            variant="h6"
+            fontWeight={700}
+          >
+            Selfie
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flexDirection: "column",
+            gap: "10px",
+            width: { xs: "140px", sm: "160px", md: "180px" },
+            padding: "18px",
+            background: "#FF3DF1",
+            borderRadius: "14px",
+          }}
+          onClick={() => {
+            navigate("/crossword");
+          }}
+        >
+          <Box
+            component="img"
+            src={crossword}
+            alt="Event Title"
+            sx={{
+              width: { xs: "80%", sm: "90%", md: "85%" },
+            }}
+          />
+          <Typography
+            sx={{ textAlign: "center", whiteSpace: "nowrap" }}
+            variant="h6"
+            fontWeight={700}
+          >
+            CrossWord
           </Typography>
         </Box>
       </Box>

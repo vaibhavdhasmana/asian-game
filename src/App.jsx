@@ -12,8 +12,13 @@ import NavBar from "./components/NavBar/NavBar";
 import Landing from "./pages/Landing/Landing";
 import { Toolbar } from "@mui/material";
 import AdminSettings from "./pages/Admin/AdminSettings";
+import WordSearchMUI from "./pages/WordSearch/WordSearchMUI";
+import { useAuth } from "./context/AuthContext";
+import SelfieMUI from "./pages/Selfie/SelfieMUI";
+import CrossWordNew from "./pages/Crossword/CrossWordNew";
 function PrivateRoute({ children }) {
   const { isAuthed } = useAuth();
+  console.log("isAuth:", isAuthed);
   return isAuthed ? children : <Navigate to="/login" replace />;
 }
 
@@ -24,11 +29,21 @@ export default function App() {
       {/* <Toolbar /> */}
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/quiz" element={<QuizMUI />} />
+        {/* <Route path="/quiz" element={<QuizMUI />} /> */}
         <Route path="/game" element={<CrosswordMUI />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/ap-admin/setting" element={<AdminSettings />} />
+        <Route path="/selfie" element={<SelfieMUI />} />
+        <Route path="/crossword" element={<CrossWordNew />} />
 
+        <Route path="/ap-admin/setting" element={<AdminSettings />} />
+        <Route
+          path="/wordSearch"
+          element={
+            <PrivateRoute>
+              <WordSearchMUI />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/play"
           element={<Placeholder title="Game Screen (Coming Soon)" />}
