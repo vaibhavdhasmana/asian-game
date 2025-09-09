@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import {
   Box,
   Fab,
@@ -18,12 +18,9 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 
 import { useAuth } from "../../context/AuthContext";
 import useUserScores from "../../hooks/useUserScores";
+import useGameSettings from "../../hooks/useGameSettings";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-const GAME_LABELS = {
-  crossWord: "Crossword",
-  wordSearch: "Word Search",
-  quiz: "Quiz",
-};
+const GAME_LABELS = { quiz: "Quiz", wordSearch: "Word Search", jigsaw: "Jigsaw" };
 const DAY_LABELS = { day1: "Day 1", day2: "Day 2", day3: "Day 3" };
 const gameTotal = (g = {}) => (g.day1 || 0) + (g.day2 || 0) + (g.day3 || 0);
 
@@ -39,6 +36,13 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
     user?.uuid,
     user?.score
   );
+  const { currentDay } = useGameSettings();
+  const allowedDays = React.useMemo(() => {
+    const d = String(currentDay);
+    if (d === "day1") return ["day1"];
+    if (d === "day2") return ["day1", "day2"];
+    return allowedDays;
+  }, [currentDay]);
 
   if (!isAuthed) return null;
 
@@ -153,7 +157,7 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
           <Divider sx={{ my: 1, borderColor: "rgba(255,255,255,0.12)" }} />
 
           {/* Per game */}
-          {["crossWord", "wordSearch", "quiz"].map((key) => {
+          {["quiz", "wordSearch", "jigsaw"].map((key) => {
             const g = score?.[key] || {};
             const gTotal = gameTotal(g);
             return (
@@ -196,12 +200,12 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
                 </Stack>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {["day1", "day2", "day3"].map((d) => (
+                  {allowedDays.map((d) => (
                     <Chip
                       key={`${key}-${d}`}
                       variant="outlined"
                       label={`${d.toUpperCase()}: ${
-                        loading ? "…" : g?.[d] || 0
+                        loading ? "â€¦" : g?.[d] || 0
                       }`}
                       sx={{
                         mb: 1,
@@ -217,7 +221,7 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
 
           {error && (
             <Typography color="error" variant="body2">
-              Couldn’t load scores. Try refresh.
+              Couldnâ€™t load scores. Try refresh.
             </Typography>
           )}
 
@@ -227,3 +231,7 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
     </>
   );
 }
+
+
+
+

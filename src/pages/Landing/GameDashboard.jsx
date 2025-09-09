@@ -1,4 +1,4 @@
-// src/pages/GameDashboard/GameDashboard.jsx
+﻿// src/pages/GameDashboard/GameDashboard.jsx
 import * as React from "react";
 import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -6,11 +6,13 @@ import { useNavigate } from "react-router-dom";
 import ScoreBadge from "../../components/ScoreBadge/ScoreBadge";
 import ScoreHistoryWidget from "../../components/ScoreHistory/ScoreHistoryWidget";
 import LeaderboardLauncher from "../../components/Leaderboard/LeaderboardLauncher";
-import DayBadge from "../../components/DayBadge/DayBadge";
+// import DayBadge from "../../components/DayBadge/DayBadge";
 import GroupSelectDialog from "../../components/GroupSelect/GroupSelectDialog";
 import useGameSettings from "../../hooks/useGameSettings";
 import { useAuth } from "../../context/AuthContext";
 import GameLaunchDialog from "./GameLaunchDialog";
+import useGroupedLeaderboard from "../../hooks/useGroupedLeaderboard";
+import { GROUP_LABEL, GROUP_LOGO } from "../../components/constant/group";
 
 import quizIcon from "../../assets/quizicon.png";
 import wordSearchIcon from "../../assets/wordSearchIcon.png";
@@ -18,14 +20,14 @@ import selfieIcon from "../../assets/selfieIcon.png";
 import jigsaw from "../../assets/jigsaw.png";
 
 const QUIZ_DONE_KEY = "ap_quiz_day1_completed";
-const GROUP_KEY = "ap_group_color"; // fixed (removed stray brace)
+const GROUP_KEY = "ap_group_key";
 
 // Central config for all launchable games
 const GAMES = [
   {
     key: "quiz",
     title: "Quiz",
-    description: "Quiz Quest – 5 questions, more right answers = more points.",
+    description: "Quiz Quest 5 questions, more right answers = more points.",
     icon: quizIcon,
     route: "/quiz",
     bg: "#FF3DF1",
@@ -33,7 +35,7 @@ const GAMES = [
   {
     key: "wordsearch",
     title: "Word Search",
-    description: "Word Search – Spot the words & score 50 points per game.",
+    description: "Word Search Spot the words & score 50 points per game.",
     icon: wordSearchIcon,
     route: "/wordSearch",
     bg: "#FF3DF1",
@@ -41,8 +43,7 @@ const GAMES = [
   {
     key: "selfie",
     title: "Selfie",
-    description:
-      "Selfie Spot – Snap a pic with our branding & save the memory!",
+    description: "Selfie Spot Snap a pic with our branding & save the memory!",
     icon: selfieIcon,
     route: "/selfie",
     bg: "#FF3DF1",
@@ -51,7 +52,7 @@ const GAMES = [
     key: "jigsaw",
     title: "JigSaw",
     description:
-      "Puzzle Rush – Solve fast, win big! Up to 160 points for the quickest.",
+      "Puzzle Rush Solve fast, win big! Up to 100 points for the quickest.",
     icon: jigsaw,
     route: "/jigsaw2",
     bg: "#FF3DF1",
@@ -62,7 +63,6 @@ export default function GameDashboard() {
   const navigate = useNavigate();
   const { isAuthed, user, setUser } = useAuth();
   const { currentDay } = useGameSettings();
-  console.log(useGameSettings);
 
   const [showGroup, setShowGroup] = React.useState(false);
   const [quizDone, setQuizDone] = React.useState(
@@ -76,7 +76,7 @@ export default function GameDashboard() {
     [launcherKey]
   );
 
-  // Prompt group selection on day2/day3 if not set
+  // Prompt group selection on day2/day3con if not set
   React.useEffect(() => {
     if (!isAuthed) return;
     if (currentDay === "day2" || currentDay === "day3") {
@@ -147,9 +147,17 @@ export default function GameDashboard() {
 
   return (
     <>
-      {/* Fixed badges */}
+      {/* Fixed badges (Day badge hidden per request) */}
       <ScoreBadge />
-      <DayBadge />
+
+      {/* Group header (visible on day2/day3 when user picked a group) */}
+      {["day2", "day3"].includes(currentDay) &&
+      localStorage.getItem(GROUP_KEY) ? (
+        <GroupHeader
+          day={currentDay}
+          groupKey={localStorage.getItem(GROUP_KEY)}
+        />
+      ) : null}
 
       {/* One reusable launcher dialog driven by config */}
       <GameLaunchDialog
@@ -162,7 +170,7 @@ export default function GameDashboard() {
         cancelLabel="Not now"
       />
 
-      <Typography
+      {/* <Typography
         sx={{ mt: { xs: "120px", sm: "90px" }, p: 3 }}
         variant="body"
         fontWeight={800}
@@ -170,7 +178,7 @@ export default function GameDashboard() {
         color="#41E3FE"
       >
         Welcome !
-      </Typography>
+      </Typography> */}
 
       {/* Group picker when admin set day2/3 */}
       <GroupSelectDialog
@@ -190,7 +198,7 @@ export default function GameDashboard() {
           px: "16px",
           flexWrap: "wrap",
           position: "absolute",
-          top: { xs: "30%", md: "30%" },
+          top: { xs: "34%", md: "34%" },
           left: 0,
         }}
       >
@@ -208,5 +216,61 @@ export default function GameDashboard() {
         }}
       />
     </>
+  );
+}
+
+function GroupHeader({ day, groupKey }) {
+  const { groups, loading } = useGroupedLeaderboard(day);
+  const list = React.useMemo(() => {
+    const g = (groups || [])
+      .slice()
+      .sort((a, b) => (b.total || 0) - (a.total || 0));
+    return g;
+  }, [groups]);
+  const idx = React.useMemo(
+    () => list.findIndex((g) => g.groupKey === groupKey),
+    [list, groupKey]
+  );
+  const rank = idx >= 0 ? idx + 1 : null;
+  const row = idx >= 0 ? list[idx] : null;
+  const label = row?.label || GROUP_LABEL[groupKey] || groupKey;
+  const logo = row?.logo || GROUP_LOGO[groupKey] || null;
+  const total = row?.total ?? 0;
+
+  return (
+    <Box
+      sx={{
+        position: "absolute",
+        top: { xs: 64, sm: 72 },
+        left: 16,
+        right: 16,
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+      }}
+    >
+      <Box
+        component="img"
+        src={logo}
+        alt={label}
+        sx={{
+          width: { xs: 64, md: 80 },
+          height: { xs: 64, md: 80 },
+          borderRadius: 2,
+          objectFit: "contain",
+          bgcolor: "rgba(255,255,255,0.06)",
+          border: "1px solid",
+          borderColor: "rgba(255,255,255,0.18)",
+        }}
+      />
+      <Box sx={{ display: "grid", gap: 0.5 }}>
+        <Box sx={{ fontWeight: 900, fontSize: { xs: 18, md: 22 } }}>
+          {label}
+        </Box>
+        <Box sx={{ color: "text.secondary", fontWeight: 700 }}>
+          {loading ? "Loading..." : `Score: ${total}  •  Rank: ${rank || "-"}`}
+        </Box>
+      </Box>
+    </Box>
   );
 }

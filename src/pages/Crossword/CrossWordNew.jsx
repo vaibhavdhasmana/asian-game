@@ -23,6 +23,7 @@ import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
+import { baseUrl } from "../../components/constant/constant";
 
 /* ==============================
    CONFIG
@@ -37,10 +38,7 @@ const CELL_MAX = 52;
 const GRID_GAP = 4;
 
 // API base
-const baseUrl =
-  import.meta.env.VITE_APP_ENV === "local"
-    ? "http://localhost:7000"
-    : "https://api.nivabupalaunchevent.com";
+// use shared baseUrl
 
 /* ==============================
    MINI CROSSWORD 9x9 with Across + Down
@@ -636,7 +634,7 @@ export default function CrossWordNew() {
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography>Checking attempt status…</Typography>
+        <Typography>Checking attempt status...</Typography>
       </Box>
     );
   }

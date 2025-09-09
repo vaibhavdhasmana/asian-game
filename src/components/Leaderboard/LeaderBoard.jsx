@@ -221,6 +221,7 @@
 // src/components/Leaderboard/LeaderBoard.jsx
 import * as React from "react";
 import { Paper, Tabs, Tab, Stack } from "@mui/material";
+import useGameSettings from "../../hooks/useGameSettings";
 import IndividualDayLeaderboard from "./IndividualDayLeaderboard";
 import GroupedLeaderboard from "./GroupedLeaderboard";
 import OverallIndividualLeaderboard from "./OverallIndividualLeaderboard";
@@ -234,6 +235,23 @@ const TABS = [
 
 export default function LeaderBoard({ defaultTab = "overall" }) {
   const [tab, setTab] = React.useState(defaultTab);
+  const { currentDay } = useGameSettings();
+  const visibleTabs = React.useMemo(() => {
+    const days = [];
+    if (currentDay === "day1") days.push("day1");
+    else if (currentDay === "day2") days.push("day1", "day2");
+    else days.push("day1", "day2", "day3");
+    return [
+      ...TABS.filter((t) => days.includes(t.key)),
+      TABS.find((t) => t.key === "overall"),
+    ].filter(Boolean);
+  }, [currentDay]);
+
+  React.useEffect(() => {
+    // If current tab is not visible anymore, reset to overall
+    const allowed = visibleTabs.map((t) => t.key);
+    if (!allowed.includes(tab)) setTab("overall");
+  }, [visibleTabs, tab]);
 
   return (
     <Paper elevation={6} sx={{ p: 2, borderRadius: 3 }}>
@@ -260,7 +278,7 @@ export default function LeaderBoard({ defaultTab = "overall" }) {
             },
           }}
         >
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <Tab key={t.key} value={t.key} label={t.label} />
           ))}
         </Tabs>

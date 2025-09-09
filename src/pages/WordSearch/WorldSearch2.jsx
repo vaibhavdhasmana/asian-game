@@ -1,4 +1,4 @@
-// src/pages/WordSearch/WordSearchMUI.jsx
+﻿// src/pages/WordSearch/WordSearchMUI.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
@@ -19,12 +19,13 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
+import { baseUrl } from "../../components/constant/constant";
 
 /* ==============================
    CONFIG
    ============================== */
 const POINTS_PER_WORD = 10;
-// 9×9 grid
+// 9Ã—9 grid
 const GRID_SIZE = 9;
 const GRID_GAP = 4;
 
@@ -35,12 +36,9 @@ const CELL_MIN = 26;
 const CELL_MAX = 48;
 
 // API base
-const baseUrl =
-  import.meta.env.VITE_APP_ENV === "local"
-    ? "http://localhost:7000"
-    : "https://api.nivabupalaunchevent.com";
+// use shared baseUrl
 
-// Target words (BUCKINGHAM removed to fit 9×9)
+// Target words (BUCKINGHAM removed to fit 9Ã—9)
 const WORDS = ["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"];
 
 /* ==============================
@@ -67,16 +65,16 @@ function hashString(str) {
 }
 
 /* ==============================
-   Placements for 9×9 (no overlaps)
+   Placements for 9Ã—9 (no overlaps)
    ============================== */
 const placements = [
-  // TEXTURES (8): ↘ from (0,0) → (7,7)
+  // TEXTURES (8): â†˜ from (0,0) â†’ (7,7)
   { word: "TEXTURES", start: [0, 0], dir: [1, 1] },
-  // BRUSHES (7): ↓ from (0,8) → (6,8)
+  // BRUSHES (7): â†“ from (0,8) â†’ (6,8)
   { word: "BRUSHES", start: [0, 8], dir: [1, 0] },
-  // LONDON (6): → from (8,0) → (8,5)
+  // LONDON (6): â†’ from (8,0) â†’ (8,5)
   { word: "LONDON", start: [8, 0], dir: [0, 1] },
-  // BIGBEN (6): → from (6,0) → (6,5)
+  // BIGBEN (6): â†’ from (6,0) â†’ (6,5)
   { word: "BIGBEN", start: [6, 0], dir: [0, 1] },
 ];
 
@@ -103,7 +101,7 @@ function buildGrid(seedString = "default") {
     }
   });
 
-  // Fill blanks with seeded random A–Z
+  // Fill blanks with seeded random A-Z
   const rng = mulberry32(hashString(seedString));
   const A = "A".charCodeAt(0);
   for (let r = 0; r < GRID_SIZE; r++) {
@@ -448,7 +446,7 @@ export default function WordSearch2() {
     setTimeout(() => (usingTouchRef.current = false), 80);
   };
 
-  /* ---------- Tap–tap fallback ---------- */
+  /* ---------- Tap-tap fallback ---------- */
   const onCellClick = (r, c) => {
     if (usingTouchRef.current) return;
     if (!serverLockChecked || alreadySubmitted || finished) return;
@@ -534,7 +532,7 @@ export default function WordSearch2() {
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography>Checking attempt status…</Typography>
+        <Typography>Checking attempt status...</Typography>
       </Box>
     );
   }
@@ -566,7 +564,7 @@ export default function WordSearch2() {
               align="center"
               color="primary"
             >
-              {dayKey.toUpperCase()} – Word Search
+              {dayKey.toUpperCase()} - Word Search
             </Typography>
 
             <Paper elevation={3} sx={{ p: { xs: 1.5, md: 2 } }}>
@@ -593,7 +591,7 @@ export default function WordSearch2() {
                   variant="outlined"
                 />
                 <Typography fontWeight={700}>
-                  {POINTS_PER_WORD} points per word • {foundWords.size} /{" "}
+                  {POINTS_PER_WORD} points per word â€¢ {foundWords.size} /{" "}
                   {WORDS.length} found
                 </Typography>
                 <Chip
@@ -690,7 +688,7 @@ export default function WordSearch2() {
                             onPointerUp={() => onPointerUp(r, c)}
                             // Mobile touch (intent captured in touchmove)
                             onTouchStart={(e) => onTouchStartCell(r, c, e)}
-                            // Tap–tap fallback
+                            // Tap-tap fallback
                             onClick={() => onCellClick(r, c)}
                             variant={
                               isFound
@@ -753,3 +751,5 @@ export default function WordSearch2() {
     </Box>
   );
 }
+
+

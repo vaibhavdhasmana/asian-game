@@ -34,6 +34,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
+import { baseUrl } from "../../components/constant/constant";
 import { useNavigate } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 
@@ -48,9 +49,9 @@ import jigsawDay3 from "../../assets/jigsaw/3.png";
    DAY CONFIG (edit only this)
    ============================== */
 const DAY_CFG = {
-  day1: { image: jigsawDay1, pointsPerTile: 6.25, timerSeconds: 120 },
-  day2: { image: jigsawDay2, pointsPerTile: 6.25, timerSeconds: 90 },
-  day3: { image: jigsawDay3, pointsPerTile: 6.25, timerSeconds: 60 },
+  day1: { image: jigsawDay1, pointsPerTile: 6.25, timerSeconds: 180 },
+  day2: { image: jigsawDay2, pointsPerTile: 6.25, timerSeconds: 180 },
+  day3: { image: jigsawDay3, pointsPerTile: 6.25, timerSeconds: 180 },
 };
 
 /* ==============================
@@ -65,10 +66,7 @@ const CELL_MIN = 75; // fixed 75 looks good on 360px
 const CELL_MAX = 75;
 const GRID_GAP = 6;
 
-const baseUrl =
-  import.meta.env.VITE_APP_ENV === "local"
-    ? "http://localhost:7000"
-    : "https://api.nivabupalaunchevent.com";
+// use shared baseUrl
 
 /* ==============================
    Helpers
@@ -304,6 +302,7 @@ export default function JigsawMUI2() {
 
   const [snack, setSnack] = useState({ open: false, message: "" });
   const [refOpen, setRefOpen] = useState(false);
+  const submittedRef = useRef(false);
 
   const finished = useMemo(
     () => order.every((tileId, pos) => tileId === pos),
@@ -486,12 +485,13 @@ export default function JigsawMUI2() {
 
   // Lock and persist final on finish/timeUp
   useEffect(() => {
-    if (!serverLockChecked || alreadySubmitted) return;
+    if (!serverLockChecked || alreadySubmitted || submittedRef.current) return;
     if (finished || timeUp) {
       localStorage.setItem(KEYS.done, "true");
       localStorage.setItem(KEYS.final, String(score));
       localStorage.removeItem(KEYS.state);
       localStorage.removeItem(KEYS.timer);
+      submittedRef.current = true;
       setAlreadySubmitted(true);
       submitScore(score);
     }
@@ -556,7 +556,7 @@ export default function JigsawMUI2() {
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography>Checking attempt status…</Typography>
+        <Typography>Checking attempt status...</Typography>
       </Box>
     );
   }
@@ -595,13 +595,23 @@ export default function JigsawMUI2() {
               sx={{
                 fontSize: { xs: "16px", md: "18px" },
                 fontWeight: { xs: 700, md: 800 },
+                display: "none",
               }}
               align="center"
               color="primary.light"
             >
               {dayKey.toUpperCase()} – Jigsaw Puzzle
             </Typography>
-
+            <Typography
+              sx={{
+                fontSize: { xs: "16px", md: "18px" },
+                fontWeight: { xs: 700, md: 800 },
+              }}
+              align="center"
+              color="primary.light"
+            >
+              {`${dayKey.toUpperCase()} - Jigsaw Puzzle`}
+            </Typography>
             <Paper
               elevation={0}
               sx={{

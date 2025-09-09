@@ -1,4 +1,4 @@
-// src/pages/Jigsaw/JigsawMUI.jsx
+﻿// src/pages/Jigsaw/JigsawMUI.jsx
 import React, {
   useEffect,
   useMemo,
@@ -36,6 +36,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
+import { baseUrl } from "../../components/constant/constant";
 
 /* -------------------------------------------------------
    REPLACE THESE 3 IMAGES WITH YOUR OWN (one per day)
@@ -64,11 +65,6 @@ const MAX_REF_WIDTH = 760; // keep things reasonable on desktop
 const CELL_MIN = 75; // your requested min cell (fits 360px perfectly)
 const CELL_MAX = 75;
 const GRID_GAP = 6;
-
-const baseUrl =
-  import.meta.env.VITE_APP_ENV === "local"
-    ? "http://localhost:7000"
-    : "https://api.nivabupalaunchevent.com";
 
 /* ==============================
    Helpers
@@ -113,11 +109,34 @@ export default function JigsawMUI() {
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
   }, [rawDay]);
 
-  // Per-day config
+  // Per-day config (with server override)
   const cfg = DAY_CFG[dayKey] || DAY_CFG.day1;
-  const puzzleImg = cfg.image;
-  const POINTS_PER_TILE = cfg.pointsPerTile;
-  const TIMER_SECONDS = cfg.timerSeconds;
+  const [serverCfg, setServerCfg] = useState({
+    imageUrl: null,
+    pointsPerTile: null,
+    timerSeconds: null,
+  });
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("ap_user") || "null");
+        const uuid = user?.uuid || user?.uniqueNo;
+        const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
+          params: { day: dayKey, game: "jigsaw", uuid },
+        });
+        const p = data?.payload || {};
+        setServerCfg({
+          imageUrl: p.imageUrl || null,
+          pointsPerTile: Number(p.pointsPerTile) || null,
+          timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
+        });
+      } catch {}
+    })();
+  }, [dayKey]);
+
+  const puzzleImg = serverCfg.imageUrl || cfg.image;
+  const POINTS_PER_TILE = serverCfg.pointsPerTile || cfg.pointsPerTile;
+  const TIMER_SECONDS = serverCfg.timerSeconds || cfg.timerSeconds;
 
   // Keys
   const KEYS = useMemo(
@@ -194,6 +213,8 @@ export default function JigsawMUI() {
 
   const [snack, setSnack] = useState({ open: false, message: "" });
   const [refOpen, setRefOpen] = useState(false); // reference image dialog
+  const submittedRef = useRef(false);
+  // const [refOpen, setRefOpen] = useState(false); // reference image dialog
 
   const finished = useMemo(
     () => order.every((tileId, pos) => tileId === pos),
@@ -335,35 +356,24 @@ export default function JigsawMUI() {
   }, [serverLockChecked, alreadySubmitted, finished, timeUp]);
 
   /* ---------- Scoring API ---------- */
-  const upsertScore = async (points) => {
-    try {
-      const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
-      const uuid = user?.uuid || user?.uniqueNo;
-      if (!uuid) return;
-      await axios.post(`${baseUrl}/api/asian-paint/score`, {
-        uuid,
-        game: "jigsaw",
-        day: dayKey,
-        points,
-      });
-    } catch (e) {
-      if (e?.response?.status === 409) {
-        localStorage.setItem(KEYS.done, "true");
-        setAlreadySubmitted(true);
-      }
-    }
-  };
+  // Removed incremental upserts to avoid early locking on server
 
   const submitScore = async (points) => {
     try {
       const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
       const uuid = user?.uuid || user?.uniqueNo;
       if (!uuid) return;
-      await axios.post(`${baseUrl}/api/asian-paint/score`, {
+      await axios.post(`${baseUrl}/api/asian-paint/score/submit`, {
         uuid,
-        game: "jigsaw",
         day: dayKey,
-        points,
+        game: "jigsaw",
+        contentVersion: 0,
+        payload: {
+          tiles: credited.size,
+          tilesMax: ROWS * COLS,
+          pointsPerTile: POINTS_PER_TILE,
+          bonus: 0,
+        },
       });
       setSnack({ open: true, message: "Score submitted!" });
     } catch (e) {
@@ -372,25 +382,39 @@ export default function JigsawMUI() {
         localStorage.setItem(KEYS.done, "true");
         setAlreadySubmitted(true);
       } else {
-        setSnack({ open: true, message: "Saved locally (offline)" });
+        // Fallback to legacy endpoint
+        try {
+          const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+          const uuid = user?.uuid || user?.uniqueNo;
+          await axios.post(`${baseUrl}/api/asian-paint/score`, {
+            uuid,
+            game: "jigsaw",
+            day: dayKey,
+            points,
+          });
+          setSnack({ open: true, message: "Score submitted!" });
+        } catch {
+          setSnack({ open: true, message: "Saved locally (offline)" });
+        }
       }
     }
   };
 
   useEffect(() => {
-    if (!serverLockChecked || alreadySubmitted) return;
+    if (!serverLockChecked || alreadySubmitted || submittedRef.current) return;
     if (finished || timeUp) {
       localStorage.setItem(KEYS.done, "true");
-      localStorage.setItem(KEYS.final, String(score)); // <— persist final score for reloads
+      localStorage.setItem(KEYS.final, String(score)); // <â€” persist final score for reloads
       localStorage.removeItem(KEYS.state);
       localStorage.removeItem(KEYS.timer);
-      setAlreadySubmitted(true); // <— lock NOW (no replay before reload)
-      submitScore(score);
+      (async () => {
+        submittedRef.current = true;
+        await submitScore(score);
+        setAlreadySubmitted(true);
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished, timeUp, serverLockChecked, alreadySubmitted]);
-
-  /* ---------- Game logic ---------- */
   const swap = (i, j) => {
     if (finished || timeUp || alreadySubmitted) return;
     setOrder((prev) => {
@@ -408,15 +432,32 @@ export default function JigsawMUI() {
           justCorrect.forEach((p) => merged.add(p));
           return merged;
         });
-        setScore((prevScore) => {
-          const nextScore = prevScore + justCorrect.length * POINTS_PER_TILE;
-          upsertScore(nextScore); // auto-save to backend
-          return nextScore;
-        });
+        const inc = justCorrect.length * POINTS_PER_TILE;
+        setScore((prevScore) => prevScore + inc);
         setSnack({
           open: true,
-          message: `Nice! +${justCorrect.length * POINTS_PER_TILE}`,
+          message: `Nice! +${inc}`,
         });
+        // Fire-and-forget progress update
+        try {
+          const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+          const uuid = user?.uuid || user?.uniqueNo;
+          if (uuid) {
+            axios
+              .post(`${baseUrl}/api/asian-paint/score/progress`, {
+                uuid,
+                day: dayKey,
+                game: "jigsaw",
+                contentVersion: 0,
+                payload: {
+                  tiles: credited.size + justCorrect.length,
+                  tilesMax: ROWS * COLS,
+                  pointsPerTile: POINTS_PER_TILE,
+                },
+              })
+              .catch(() => {});
+          }
+        } catch {}
       }
       return next;
     });
@@ -443,12 +484,32 @@ export default function JigsawMUI() {
     setCredited(new Set());
     setScore(0);
   };
+  // Debug helper: clear only localStorage + local state (server submission remains)
+  const resetLocal = () => {
+    try {
+      localStorage.removeItem(KEYS.state);
+      localStorage.removeItem(KEYS.timer);
+      localStorage.removeItem(KEYS.done);
+      localStorage.removeItem(KEYS.final);
+    } catch {}
+    submittedRef.current = false;
+    setAlreadySubmitted(false);
+    setTimeUp(false);
+    setSelectedIndex(null);
+    setCredited(new Set());
+    setScore(0);
+    setSecondsLeft(TIMER_SECONDS);
+    const shuf = shuffle(solvedOrder);
+    if (shuf.every((v, i) => v === i)) shuf.reverse();
+    setOrder(shuf);
+    setSnack({ open: true, message: "Local progress reset" });
+  };
 
   /* ---------- Loading ---------- */
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography>Checking attempt status…</Typography>
+        <Typography>Checking attempt status...</Typography>
       </Box>
     );
   }
@@ -491,7 +552,19 @@ export default function JigsawMUI() {
               align="center"
               color="primary.light"
             >
-              {dayKey.toUpperCase()} – Jigsaw Puzzle
+              {dayKey.toUpperCase()} â€“ Jigsaw Puzzle
+            </Typography>
+
+            <Typography
+              sx={{
+                fontSize: { xs: "16px", md: "18px" },
+                fontWeight: { xs: 700, md: 800 },
+                display: "none",
+              }}
+              align="center"
+              color="primary.light"
+            >
+              {`${dayKey.toUpperCase()} - Jigsaw Puzzle`}
             </Typography>
 
             <Paper
@@ -551,7 +624,7 @@ export default function JigsawMUI() {
                     }}
                     color="rgba(255,255,255,0.9)"
                   >
-                    Tap two tiles to swap • {credited.size} / {ROWS * COLS}{" "}
+                    Tap two tiles to swap - {credited.size} / {ROWS * COLS}{" "}
                     placed
                   </Typography>
                 </Stack>
@@ -758,7 +831,13 @@ export default function JigsawMUI() {
         </Grid>
       </Grid>
 
-      {/* Reference Image Dialog */}
+
+      {/* Debug: Reset local progress (does not bypass server lock) */}
+      <Box sx={{ position: "fixed", top: 12, right: 12, zIndex: 100 }}>
+        <Button size="small" variant="outlined" onClick={resetLocal} startIcon={<ReplayIcon />}>
+          Reset Local
+        </Button>
+      </Box>      {/* Reference Image Dialog */}
       <Dialog
         open={refOpen}
         onClose={() => setRefOpen(false)}
@@ -818,3 +897,6 @@ export default function JigsawMUI() {
     </Box>
   );
 }
+
+
+

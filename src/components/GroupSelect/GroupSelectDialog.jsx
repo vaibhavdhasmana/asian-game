@@ -17,6 +17,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import useGameSettings from "../../hooks/useGameSettings";
 import { baseUrl } from "../constant/constant";
 import axios from "axios";
+import { GROUP_LABEL, GROUP_LOGO } from "../constant/group";
 // import useGameSettings from "../../hooks/useGameSettings";
 // import { baseUrl } from "../../constant";
 
@@ -27,22 +28,17 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const [color, setColor] = React.useState("");
-  const { groupsColors } = useGameSettings();
+  const [groupKey, setGroupKey] = React.useState("");
+  const { groups } = useGameSettings();
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
 
   const dayKey = String(day).toLowerCase().replace(/\s+/g, "");
-  const list =
-    dayKey === "day2"
-      ? groupsColors.day2
-      : dayKey === "day3"
-      ? groupsColors.day3
-      : [];
+  const list = dayKey === "day2" ? groups.day2 : dayKey === "day3" ? groups.day3 : [];
   // Default to saved value (if any) or first in list
   React.useEffect(() => {
-    const saved = localStorage.getItem("ap_group_color") || "";
-    setColor(saved && list.includes(saved) ? saved : list[0] || "");
+    const saved = localStorage.getItem("ap_group_key") || "";
+    setGroupKey(saved && list.includes(saved) ? saved : list[0] || "");
   }, [dayKey, list]);
 
   // If dialog is opened, check DB; if already selected, auto-close.
@@ -53,17 +49,13 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
         const user = JSON.parse(localStorage.getItem("ap_user") || "null");
         const uuid = user?.uuid || user?.uniqueNo;
         if (!uuid) return;
-        const { data } = await axios.get(
-          `${baseUrl}/api/asian-paint/group/color`,
-          {
-            params: { uuid, day: dayKey },
-          }
-        );
-        console.log("data", data);
-        const existing = data?.color;
+        const { data } = await axios.get(`${baseUrl}/api/asian-paint/group`, {
+          params: { uuid },
+        });
+        const existing = data?.groupKey;
         if (existing) {
           // cache and notify parent, then close so the pop never shows again
-          localStorage.setItem(`ap_group_color`, existing);
+          localStorage.setItem(`ap_group_key`, existing);
           localStorage.setItem(`ap_group_selected_${dayKey}`, "true");
           onSelect?.(existing);
           onClose?.();
@@ -73,7 +65,7 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
   }, [open, dayKey, onClose, onSelect]);
 
   const confirm = async () => {
-    if (!color || saving) return;
+    if (!groupKey || saving) return;
     setError("");
     try {
       // identify user
@@ -86,18 +78,17 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
 
       setSaving(true);
       // persist to DB
-      await axios.post(`${baseUrl}/api/asian-paint/group/color`, {
+      await axios.post(`${baseUrl}/api/asian-paint/group/select`, {
         uuid,
-        day: dayKey, // "day2" | "day3"
-        color, // e.g. "red" | "#FF0000"
+        groupKey,
       });
 
       // (optional) keep local cache in case you read it elsewhere
-      localStorage.setItem("ap_group_color", color);
+      localStorage.setItem("ap_group_key", groupKey);
       localStorage.setItem(`ap_group_selected_${dayKey}`, "true");
 
       // notify parent close
-      onSelect?.(color);
+      onSelect?.(groupKey);
 
       onClose?.();
     } catch (e) {
@@ -140,25 +131,21 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
       <TextField
         select
         fullWidth
-        label="Group (color)"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
+        label="Select Group"
+        value={groupKey}
+        onChange={(e) => setGroupKey(e.target.value)}
         disabled={!list.length}
         helperText={!list.length ? "No groups configured" : " "}
       >
-        {list.map((c) => (
-          <MenuItem key={c} value={c}>
+        {list.map((key) => (
+          <MenuItem key={key} value={key}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: "50%",
-                  bgcolor: c, // assumes CSS color names or hex in list
-                  border: "1px solid rgba(0,0,0,0.2)",
-                }}
-              />
-              {cap(c)}
+              {GROUP_LOGO[key] ? (
+                <Box component="img" src={GROUP_LOGO[key]} alt={key} sx={{ width: 18, height: 18, borderRadius: '50%' }} />
+              ) : (
+                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'divider' }} />
+              )}
+              {GROUP_LABEL[key] || cap(key)}
             </Box>
           </MenuItem>
         ))}
@@ -168,7 +155,7 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
         <Button
           variant="contained"
           onClick={confirm}
-          disabled={!color || saving}
+          disabled={!groupKey || saving}
         >
           {saving ? "Saving..." : "Save"}
         </Button>

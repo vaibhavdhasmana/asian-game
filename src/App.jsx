@@ -26,6 +26,12 @@ function PrivateRoute({ children }) {
   return isAuthed ? children : <Navigate to="/login" replace />;
 }
 
+function AdminRoute({ children }) {
+  const { user, isAuthed } = useAuth();
+  const ok = isAuthed && !!user?.isAdmin;
+  return ok ? children : <Navigate to="/" replace />;
+}
+
 export default function App() {
   return (
     <>
@@ -34,16 +40,23 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         {/* <Route path="/quiz" element={<QuizMUI />} /> */}
-        <Route path="/game" element={<CrosswordMUI />} />
         <Route path="/login" element={<Login />} />
         <Route path="/selfie" element={<SelfieMUI />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/crossword" element={<CrossWordNew />} />
         <Route path="/jigsaw2" element={<JigsawMUI2 />} />
         <Route path="/test/jigsaw2" element={<JigsawMUI />} />
-        <Route path="/test/word-seracht2" element={<WordSearch2 />} />
+        <Route path="/test/word-search2" element={<WordSearch2 />} />
         <Route path="/test/camera-test" element={<CameraTest />} />
-
-        <Route path="/ap-admin/setting" element={<AdminSettings />} />
+        <Route path="/check" element={<AdminSettings />} />
+        <Route
+          path="/ap-admin/setting"
+          element={
+            <AdminRoute>
+              <AdminSettings />
+            </AdminRoute>
+          }
+        />
         <Route path="/wordSearch" element={<WordSearchMUI />} />
         <Route
           path="/JigsawMUI2"

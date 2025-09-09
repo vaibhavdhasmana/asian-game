@@ -1,4 +1,4 @@
-// src/pages/WordSearch/WordSearchMUI.jsx
+﻿// src/pages/WordSearch/WordSearchMUI.jsx
 import React, {
   useEffect,
   useLayoutEffect,
@@ -25,12 +25,13 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
+import { baseUrl } from "../../components/constant/constant";
 
 /* ==============================
    CONFIG
    ============================== */
 const POINTS_PER_WORD = 10;
-const GRID_SIZE = 9; // 9×9 grid
+const GRID_SIZE = 9; // 9x9 grid
 const GRID_GAP = 4;
 
 // Mobile sizing (hard min 360px)
@@ -39,12 +40,9 @@ const MAX_REF_WIDTH = 760;
 const CELL_MIN = 26;
 const CELL_MAX = 48;
 
-const baseUrl =
-  import.meta.env.VITE_APP_ENV === "local"
-    ? "http://localhost:7000"
-    : "https://api.nivabupalaunchevent.com";
+// baseUrl from constant.js
 
-// Words (fit 9×9)
+// Words (fit 9x9)
 const WORDS = ["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"];
 
 /* ==============================
@@ -72,19 +70,19 @@ function hashString(str) {
 /* ==============================
    Fixed placements (no conflicts)
    ============================== */
-const placements = [
-  { word: "TEXTURES", start: [0, 0], dir: [1, 1] }, // ↘
-  { word: "BRUSHES", start: [0, 8], dir: [1, 0] }, // ↓
-  { word: "LONDON", start: [8, 0], dir: [0, 1] }, // →
-  { word: "BIGBEN", start: [6, 0], dir: [0, 1] }, // →
+const DEFAULT_PLACEMENTS = [
+  { word: "TEXTURES", start: [0, 0], dir: [1, 1] }, // â†˜
+  { word: "BRUSHES", start: [0, 8], dir: [1, 0] }, // â†“
+  { word: "LONDON", start: [8, 0], dir: [0, 1] }, // â†’
+  { word: "BIGBEN", start: [6, 0], dir: [0, 1] }, // â†’
 ];
 
-function buildGrid(seedString = "default") {
+function buildGrid(seedString = "default", placementsList = DEFAULT_PLACEMENTS) {
   const grid = Array.from({ length: GRID_SIZE }, () =>
     Array.from({ length: GRID_SIZE }, () => "")
   );
 
-  placements.forEach(({ word, start, dir }) => {
+  placementsList.forEach(({ word, start, dir }) => {
     const [sr, sc] = start;
     const [dr, dc] = dir;
     for (let i = 0; i < word.length; i++) {
@@ -101,7 +99,7 @@ function buildGrid(seedString = "default") {
     }
   });
 
-  // Fill with deterministic A–Z
+  // Fill with deterministic A-Z
   const rng = mulberry32(hashString(seedString));
   const A = "A".charCodeAt(0);
   for (let r = 0; r < GRID_SIZE; r++) {
@@ -147,6 +145,52 @@ export default function WordSearchMUI() {
     }),
     [dayKey]
   );
+
+  // Server-driven overrides (optional)
+  const [contentVersion, setContentVersion] = useState(0);
+  const [pointsPerWord, setPointsPerWord] = useState(POINTS_PER_WORD);
+  const [serverWords, setServerWords] = useState(null);
+  const [serverPlacements, setServerPlacements] = useState(null);
+  const WORDS = useMemo(
+    () => serverWords || ["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"],
+    [serverWords]
+  );
+  const placementsList = useMemo(
+    () => serverPlacements || DEFAULT_PLACEMENTS,
+    [serverPlacements]
+  );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+        const uuid = user?.uuid || user?.uniqueNo;
+        const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
+          params: { day: dayKey, game: "wordSearch", uuid },
+        });
+        setContentVersion(data?.version || 0);
+        const ppw = Number(
+          data?.payload?.pointsPerWord ?? data?.payload?.points_per_word
+        );
+        if (Number.isFinite(ppw) && ppw > 0) setPointsPerWord(ppw);
+        if (Array.isArray(data?.payload?.words) && data.payload.words.length) {
+          setServerWords(
+            data.payload.words.map((w) => String(w).toUpperCase())
+          );
+        }
+        if (Array.isArray(data?.payload?.placements) && data.payload.placements.length) {
+          setServerPlacements(
+            data.payload.placements.map((p) => ({
+              word: String(p.word).toUpperCase(),
+              start: p.start,
+              dir: p.dir,
+            }))
+          );
+        }
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayKey]);
 
   /* ---------- Responsive sizing (instant, no scroll needed) ---------- */
   const wrapRef = useRef(null);
@@ -200,7 +244,7 @@ export default function WordSearchMUI() {
         }
       }
     } catch {}
-    const g = buildGrid(`ws-${dayKey}-9x9`);
+    const g = buildGrid(`ws-${dayKey}-9x9`, placementsList);
     localStorage.setItem(KEYS.grid, JSON.stringify(g));
     return g;
   });
@@ -216,7 +260,7 @@ export default function WordSearchMUI() {
 
   const [snack, setSnack] = useState({ open: false, message: "" });
 
-  const totalPoints = WORDS.length * POINTS_PER_WORD;
+  const totalPoints = WORDS.length * pointsPerWord;
   const finished = foundWords.size === WORDS.length;
 
   /* ---------- Helper to hit-test cell under finger ---------- */
@@ -253,7 +297,7 @@ export default function WordSearchMUI() {
           const pts = Number(data.points) || 0;
           setScore(pts);
           // Only show as finished if server says full points
-          if (pts >= WORDS.length * POINTS_PER_WORD) {
+          if (pts >= totalPoints) {
             setFoundWords(new Set(WORDS));
           } else {
             // hydrate whatever local progress we have, but keep input disabled
@@ -422,7 +466,7 @@ export default function WordSearchMUI() {
     setTimeout(() => (usingTouchRef.current = false), 80);
   };
 
-  /* ---------- Tap–tap fallback ---------- */
+  /* ---------- Tap-tap fallback ---------- */
   const onCellClick = (r, c) => {
     if (usingTouchRef.current) return;
     if (!serverLockChecked || alreadySubmitted || finished) return;
@@ -458,8 +502,8 @@ export default function WordSearchMUI() {
     const newCells = new Set(foundCells);
     path.forEach(([pr, pc]) => newCells.add(toKey(pr, pc)));
     setFoundCells(newCells);
-    setScore((prev) => prev + POINTS_PER_WORD);
-    setSnack({ open: true, message: `Found ${match}! +${POINTS_PER_WORD}` });
+    setScore((prev) => prev + pointsPerWord);
+    setSnack({ open: true, message: `Found ${match}! +${pointsPerWord}` });
   };
 
   /* ---------- Final submit ---------- */
@@ -468,11 +512,12 @@ export default function WordSearchMUI() {
       const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
       const uuid = user?.uuid || user?.uniqueNo;
       if (!uuid) return;
-      await axios.post(`${baseUrl}/api/asian-paint/score`, {
+      await axios.post(`${baseUrl}/api/asian-paint/score/submit`, {
         uuid,
-        game: "wordSearch",
         day: dayKey,
-        points,
+        game: "wordSearch",
+        contentVersion: 0,
+        payload: { found: foundWords.size, wordsMax: WORDS.length, pointsPerWord: 10 },
       });
       setSnack({ open: true, message: "Score submitted!" });
     } catch (e) {
@@ -481,7 +526,20 @@ export default function WordSearchMUI() {
         localStorage.setItem(KEYS.done, "true");
         setAlreadySubmitted(true);
       } else {
-        setSnack({ open: true, message: "Saved locally (offline)" });
+        // Fallback to legacy endpoint
+        try {
+          const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+          const uuid = user?.uuid || user?.uniqueNo;
+          await axios.post(`${baseUrl}/api/asian-paint/score`, {
+            uuid,
+            game: "wordSearch",
+            day: dayKey,
+            points,
+          });
+          setSnack({ open: true, message: "Score submitted!" });
+        } catch {
+          setSnack({ open: true, message: "Saved locally (offline)" });
+        }
       }
     }
   };
@@ -500,7 +558,7 @@ export default function WordSearchMUI() {
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-        <Typography>Checking attempt status…</Typography>
+        <Typography>Checking attempt status...</Typography>
       </Box>
     );
   }
@@ -531,7 +589,7 @@ export default function WordSearchMUI() {
               align="center"
               color="primary"
             >
-              {dayKey.toUpperCase()} – Word Search
+              {dayKey.toUpperCase()} - Word Search
             </Typography>
 
             <Paper elevation={3} sx={{ p: { xs: 1.5, md: 2 } }}>
@@ -552,13 +610,13 @@ export default function WordSearchMUI() {
                       >
                         {score}
                       </Typography>{" "}
-                      / {WORDS.length * POINTS_PER_WORD}
+                      / {WORDS.length * pointsPerWord}
                     </Typography>
                   }
                   variant="outlined"
                 />
                 <Typography fontWeight={700}>
-                  {POINTS_PER_WORD} points per word • {foundWords.size} /{" "}
+                  {pointsPerWord} points per word - {foundWords.size} /{" "}
                   {WORDS.length} found
                 </Typography>
                 <Chip
@@ -729,3 +787,8 @@ export default function WordSearchMUI() {
     </Box>
   );
 }
+
+
+
+
+

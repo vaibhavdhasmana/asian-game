@@ -11,6 +11,7 @@ export default function UploadCard({
   game,
   groupKey = "default",
   adminKey,
+  adminUuid,
   onDone,
 }) {
   const inputRef = React.useRef(null);
@@ -30,9 +31,10 @@ export default function UploadCard({
       const url = `${baseUrl}/api/admin/content/upload?day=${day}&game=${game}${
         groupKey ? `&group=${groupKey}` : ""
       }`;
-      const res = await axios.post(url, fd, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const headers = adminUuid
+        ? { "x-admin-uuid": adminUuid }
+        : { "x-admin-key": adminKey };
+      const res = await axios.post(url, fd, { headers });
       setStatus(`Uploaded v${res.data?.version || "?"}`);
       onDone?.();
       setFile(null);
@@ -55,7 +57,7 @@ export default function UploadCard({
         <input
           ref={inputRef}
           type="file"
-          accept=".csv"
+          accept={game === 'jigsaw' ? 'image/*,.json' : '.csv,.json'}
           hidden
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
@@ -65,7 +67,7 @@ export default function UploadCard({
             variant="outlined"
             onClick={pick}
           >
-            Choose CSV
+            {game === 'jigsaw' ? 'Choose Image/JSON' : 'Choose CSV/JSON'}
           </Button>
           <Button
             disabled={!file || loading}

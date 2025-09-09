@@ -1,22 +1,21 @@
-// Edit these arrays any time to add/remove groups (colors)
+// Day 2/3 competition groups
 export const GROUPS = {
-  day2: ["purple", "green", "orange", "yellow", "red"],
-  day3: ["purple", "green", "orange", "yellow", "red"],
+  day2: ["queen", "king", "bishop", "rook"],
+  day3: ["queen", "king", "bishop", "rook"],
 };
 
-// Pretty labels & optional swatches for UI
+// Labels for UI
 export const GROUP_LABEL = {
-  purple: "Purple",
-  green: "Green",
-  orange: "Orange",
-  yellow: "Yellow",
-  red: "Red",
+  queen: "The Queen's Palette",
+  king: "The King's Tone",
+  bishop: "The Bishop's Gambit",
+  rook: "The Rook's Canvas",
 };
 
-export const GROUP_COLOR_HEX = {
-  purple: "#7E57C2",
-  green: "#43A047",
-  orange: "#FB8C00",
-  yellow: "#FDD835",
-  red: "#E53935",
+// Optional logos (place assets under public/logos/)
+export const GROUP_LOGO = {
+  queen: "/logos/queen.jpeg",
+  king: "/logos/king.jpeg",
+  bishop: "/logos/bishop.jpeg",
+  rook: "/logos/rook.jpeg",
 };

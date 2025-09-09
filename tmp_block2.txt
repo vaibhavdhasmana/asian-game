@@ -1,0 +1,10 @@
+    if (!serverLockChecked || alreadySubmitted || submittedRef.current) return;
+    if (finished || timeUp) {
+      localStorage.setItem(KEYS.done, "true");
+      localStorage.setItem(KEYS.final, String(score)); // <— persist final score for reloads
+      localStorage.removeItem(KEYS.state);
+      localStorage.removeItem(KEYS.timer);
+      (async () => {
+        await submitScore(score);
+        setAlreadySubmitted(true);
+      })();

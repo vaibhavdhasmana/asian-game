@@ -52,11 +52,11 @@
 //   );
 // }
 import * as React from "react";
-import { Box, Chip, Skeleton, Stack } from "@mui/material";
+import { Box, Chip, Skeleton, Stack, Avatar } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 // import useTotalScore from "../../hooks/useTotalScore";
 import { useAuth } from "../../context/AuthContext";
-import { GROUP_COLOR_HEX, GROUP_LABEL } from "../constant/group";
+import { GROUP_LABEL, GROUP_LOGO } from "../constant/group";
 import useGameSettings from "../../hooks/useGameSettings";
 // import { GROUP_LABEL, GROUP_COLOR_HEX } from "../constant/groups";
 import useTotalScore from "../../hooks/useTotalScore";
@@ -70,14 +70,14 @@ export default function ScoreBadge() {
 
   // read saved group for day2/day3
   const dayKey = String(currentDay).toLowerCase().replace(/\s+/g, "");
-  const storageKey = `ap_group_color`;
+  const storageKey = `ap_group_key`;
   const savedGroup =
     currentDay === "day2" || currentDay === "day3"
       ? localStorage.getItem(storageKey) || ""
       : "";
 
   const groupLabel = GROUP_LABEL[savedGroup] || (savedGroup ? savedGroup : "");
-  const groupBg = GROUP_COLOR_HEX[savedGroup];
+  const groupLogo = GROUP_LOGO[savedGroup] || null;
 
   return (
     <Box
@@ -102,17 +102,22 @@ export default function ScoreBadge() {
           alignItems="center"
         >
           {/* Group chip (only for day2/day3 when selected) */}
-          {groupLabel && (
+          {/* {groupLabel && (
             <Chip
               size="small"
               label={`Group: ${groupLabel}`}
-              sx={{
-                fontWeight: 800,
-                bgcolor: groupBg || "action.selected",
-                color: groupBg ? "#fff" : "inherit",
-              }}
+              avatar={
+                groupLogo ? (
+                  <Avatar
+                    src={groupLogo}
+                    alt={groupLabel}
+                    sx={{ width: 20, height: 20 }}
+                  />
+                ) : undefined
+              }
+              sx={{ fontWeight: 800 }}
             />
-          )}
+          )} */}
 
           {/* Score chip */}
           <Chip

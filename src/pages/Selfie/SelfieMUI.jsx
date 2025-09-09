@@ -255,9 +255,9 @@ export default function SelfieMUI() {
       <IconButton
         aria-label="Home"
         onClick={() => navigate("/")}
-        sx={{ position: "fixed", top: 30, right: 12, zIndex: 100 }}
+        sx={{ position: "fixed", top: 60, right: 12, zIndex: 100 }}
       >
-        <HomeIcon sx={{ fontSize: "227x" }} />
+        <HomeIcon sx={{ fontSize: "28px" }} />
       </IconButton>
 
       {/* <Grid container justifyContent="center" sx={{ px: "12px" }}>
@@ -274,25 +274,25 @@ export default function SelfieMUI() {
       <CardContent sx={{ justifyContent: "center" }}>
         <Grid container spacing={2} sx={{ justifyContent: "center", mt: 6 }}>
           <Grid item xs={12}>
-                  <Paper
-                    elevation={3}
-                    sx={{
-                      position: "relative",
-                      aspectRatio: `${OUTPUT_WIDTH} / ${OUTPUT_HEIGHT}`,
-                      width: "100%",
-                      // Keep camera view within viewport height on desktop to avoid scroll
-                      maxWidth: {
-                        xs: 360,
-                        sm: 420,
-                        md: "min(480px, calc((100dvh - 260px) * 0.5625))", // account for extra top margin
-                      },
-                      mt: { xs: 1, md: 3 },
-                      mx: "auto",
-                      overflow: "hidden",
-                      borderRadius: 2,
-                      bgcolor: "#000",
-                    }}
-                  >
+            <Paper
+              elevation={3}
+              sx={{
+                position: "relative",
+                aspectRatio: `${OUTPUT_WIDTH} / ${OUTPUT_HEIGHT}`,
+                width: "100%",
+                // Keep camera view within viewport height on desktop to avoid scroll
+                maxWidth: {
+                  xs: 360,
+                  sm: 420,
+                  md: "min(480px, calc((100dvh - 260px) * 0.5625))", // account for extra top margin
+                },
+                mt: { xs: 1, md: 3 },
+                mx: "auto",
+                overflow: "hidden",
+                borderRadius: 2,
+                bgcolor: "#000",
+              }}
+            >
               {/* Camera / Photo */}
               {!captured ? (
                 <video

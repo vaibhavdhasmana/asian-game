@@ -13,6 +13,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
 import { baseUrl } from "../../components/constant/constant";
+import { useNavigate } from "react-router-dom";
 export default function Register({ setShowRegister }) {
   const [formData, setFormData] = useState({ name: "", uniqueNo: "" });
   const [loginFormData, setLoginFormData] = useState({ uniqueNo: "" });
@@ -84,7 +85,10 @@ export default function Register({ setShowRegister }) {
           <Button
             variant="outlined"
             sx={{ mt: 3 }}
-            onClick={() => setShowRegister(false)}
+            onClick={() => {
+              if (typeof setShowRegister === "function") setShowRegister(false);
+              else navigate("/");
+            }}
           >
             Ok
           </Button>
@@ -112,7 +116,10 @@ export default function Register({ setShowRegister }) {
             cursor: "pointer",
             "&:hover": { transform: "scale(1.1)" },
           }}
-          onClick={() => setShowRegister(false)}
+          onClick={() => {
+            if (typeof setShowRegister === "function") setShowRegister(false);
+            else navigate("/");
+          }}
         />
 
         {!login && (
@@ -205,6 +212,7 @@ export default function Register({ setShowRegister }) {
                 </Button>
               </Box>
             </Box>
+  const navigate = useNavigate();
           </>
         )}
       </Paper>

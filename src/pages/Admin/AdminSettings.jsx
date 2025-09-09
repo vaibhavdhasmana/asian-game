@@ -14,42 +14,29 @@ import {
   Grid,
 } from "@mui/material";
 import UploadCard from "../../components/admin/UploadCard";
-import GroupMatrix from "../../components/admin/GroupMatrix";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
 import { baseUrl } from "../../components/constant/constant";
-import ColorGroupsEditor from "../../components/admin/ColorGroupsEditor";
-import ColorUploadMatrix from "../../components/admin/ColorUploadMatrix";
-import QuizUploadTile from "../../components/admin/QuizUploadTile";
 
 export default function AdminSettings() {
+  const { user } = useAuth();
   const [tab, setTab] = React.useState("day1");
-  const [groups2, setGroups2] = React.useState(5);
-  const [groups3, setGroups3] = React.useState(5);
   const adminKey = import.meta.env.VITE_ADMIN_KEY || ""; // dev only
   console.log("adminKey", adminKey);
   const [currentDay, setCurrentDay] = React.useState("day1");
-  const [groupsColors, setGroupsColors] = React.useState({
-    day2: [],
-    day3: [],
-  });
 
   React.useEffect(() => {
+    const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
     axios
-      .get(`${baseUrl}/api/admin/settings`, {
-        headers: { "x-admin-key": adminKey },
-      })
+      .get(`${baseUrl}/api/admin/settings`, { headers })
       .then((res) => {
         setCurrentDay(res.data?.currentDay || "day1");
-        setGroupsColors(res.data?.groupsColors || { day2: [], day3: [] });
       });
-  }, [adminKey]);
+  }, [adminKey, user]);
 
   const saveDay = async () => {
-    await axios.post(
-      `${baseUrl}/api/admin/settings/day`,
-      { currentDay },
-      { headers: { "x-admin-key": adminKey } }
-    );
+    const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
+    await axios.post(`${baseUrl}/api/admin/settings/day`, { currentDay }, { headers });
   };
   const onAnyUpload = () => {
     // toast or refresh status if needed
@@ -89,13 +76,10 @@ export default function AdminSettings() {
           </Button>
         </Stack>
       </Stack>
-      <Grid item xs={12} sm={6} md={4}>
-        <QuizUploadTile />
-      </Grid>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab value="day1" label="Day 1" />
-        <Tab value="day2" label="Day 2 (Grouped)" />
-        <Tab value="day3" label="Day 3 (Grouped)" />
+        <Tab value="day2" label="Day 2" />
+        <Tab value="day3" label="Day 3" />
       </Tabs>
 
       {tab === "day1" && (
@@ -111,13 +95,7 @@ export default function AdminSettings() {
             day="day1"
             game="quiz"
             adminKey={adminKey}
-            onDone={onAnyUpload}
-          />
-          <UploadCard
-            title="Crossword"
-            day="day1"
-            game="crossword"
-            adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
           />
           <UploadCard
@@ -125,43 +103,76 @@ export default function AdminSettings() {
             day="day1"
             game="wordSearch"
             adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
+          />
+          <UploadCard
+            title="Jigsaw (Image or JSON)"
+            day="day1"
+            game="jigsaw"
+            adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
           />
         </Box>
       )}
 
       {tab === "day2" && (
-        <>
-          <ColorGroupsEditor
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" } }}>
+          <UploadCard
+            title="Quiz"
             day="day2"
-            colors={groupsColors.day2}
-            onChange={(arr) => setGroupsColors((s) => ({ ...s, day2: arr }))}
+            game="quiz"
             adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
           />
-          <ColorUploadMatrix
+          <UploadCard
+            title="Word Search"
             day="day2"
-            colors={groupsColors.day2}
+            game="wordSearch"
             adminKey={adminKey}
-            onDone={() => {}}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
           />
-        </>
+          <UploadCard
+            title="Jigsaw (Image or JSON)"
+            day="day2"
+            game="jigsaw"
+            adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
+          />
+        </Box>
       )}
 
       {tab === "day3" && (
-        <>
-          <ColorGroupsEditor
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" } }}>
+          <UploadCard
+            title="Quiz"
             day="day3"
-            colors={groupsColors.day3}
-            onChange={(arr) => setGroupsColors((s) => ({ ...s, day3: arr }))}
+            game="quiz"
             adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
           />
-          <ColorUploadMatrix
+          <UploadCard
+            title="Word Search"
             day="day3"
-            colors={groupsColors.day3}
+            game="wordSearch"
             adminKey={adminKey}
-            onDone={() => {}}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
           />
-        </>
+          <UploadCard
+            title="Jigsaw (Image or JSON)"
+            day="day3"
+            game="jigsaw"
+            adminKey={adminKey}
+            adminUuid={user?.isAdmin ? user?.uuid : undefined}
+            onDone={onAnyUpload}
+          />
+        </Box>
       )}
     </Container>
   );

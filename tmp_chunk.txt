@@ -1,0 +1,37 @@
+      [i, j].forEach((pos) => {
+        if (next[pos] === pos && !credited.has(pos)) justCorrect.push(pos);
+      });
+
+      if (justCorrect.length) {
+        setCredited((old) => {
+          const merged = new Set(old);
+          justCorrect.forEach((p) => merged.add(p));
+          return merged;
+        });
+        setScore(
+        const inc = justCorrect.length * POINTS_PER_TILE;
+        setScore((prevScore) => prevScore + inc);
+        setSnack({
+        try {
+          const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+          const uuid = user?.uuid || user?.uniqueNo;
+          if (uuid) {
+            await axios.post(`${baseUrl}/api/asian-paint/score/progress`, {
+              uuid,
+              day: dayKey,
+              game: "jigsaw",
+              contentVersion: 0,
+              payload: {
+                tiles: credited.size + justCorrect.length,
+                tilesMax: ROWS * COLS,
+                pointsPerTile: POINTS_PER_TILE,
+              },
+            });
+          }
+        } catch {}
+          open: true,
+          message: `Nice! +${justCorrect.length * POINTS_PER_TILE}`,
+        });
+      }
+      return next;
+    });
