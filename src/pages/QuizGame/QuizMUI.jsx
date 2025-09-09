@@ -65,6 +65,7 @@ export default function QuizMUI() {
 
   const intervalRef = useRef(null);
   const autoNextRef = useRef(null);
+  const resumeSecRef = useRef(null);
 
   // Load content (with fallback to local static if desired)
   useEffect(() => {
@@ -126,54 +127,125 @@ export default function QuizMUI() {
     })();
   }, [dayKey, KEYS.user, KEYS.done]);
 
-  // Load local progress
+  // Load local progress (resume where left using qIndex + answers + secondsLeft if unanswered)
   useEffect(() => {
     if (!serverLockChecked || alreadySubmitted) return;
     try {
       const raw = localStorage.getItem(KEYS.state);
       if (!raw) return;
       const saved = JSON.parse(raw);
+      if (Array.isArray(saved.answers)) setAnswers(saved.answers);
       if (typeof saved.qIndex === 'number') setQIndex(saved.qIndex);
-      if (typeof saved.score === 'number') setScore(saved.score);
+      // If we have secondsLeft saved for an unanswered question, keep it to apply on timer init
+      if (
+        typeof saved.secondsLeft === 'number' &&
+        Array.isArray(saved.answers) &&
+        typeof saved.qIndex === 'number'
+      ) {
+        const ans = saved.answers[saved.qIndex];
+        const isAnswered = typeof ans === 'number' && ans >= 0;
+        if (!isAnswered) {
+          const sec = Math.max(0, saved.secondsLeft);
+          // Prime both a ref (used by timer effect) and state so UI shows the right value even if effects interleave
+          resumeSecRef.current = sec;
+          setSecondsLeft(sec);
+        }
+      }
     } catch {}
   }, [serverLockChecked, alreadySubmitted, KEYS.state]);
 
-  // Timer
+  // Timer (reset per question; recompute locked from answers)
   useEffect(() => {
     if (!serverLockChecked || finished || quiz.length === 0) return;
     clearInterval(intervalRef.current);
-    setSecondsLeft(timerSeconds);
-    setSelected(null);
-    setLocked(false);
-    setStatus(null);
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(intervalRef.current);
-          setLocked(true);
-          setStatus('timeout');
-          autoNextRef.current = setTimeout(() => handleNext(), 1200);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+
+    // Derive current state from saved answers
+    const ans = answers[qIndex];
+    const isAnswered = typeof ans === 'number' && ans >= 0;
+    const correct = isAnswered && ans === quiz[qIndex]?.correctIndex;
+
+    setSelected(isAnswered ? ans : null);
+    setLocked(isAnswered);
+    setStatus(isAnswered ? (correct ? 'correct' : 'wrong') : null);
+
+    // Recompute score from all answers so far
+    const s = answers.reduce((acc, a, i) => acc + (a === quiz[i]?.correctIndex ? POINTS_PER_CORRECT : 0), 0);
+    setScore(s);
+
+    // For unanswered question, start timer; prefer saved seconds and avoid overriding a restored value
+    let startSec = secondsLeft;
+    if (!isAnswered) {
+      if (typeof resumeSecRef.current === 'number' && resumeSecRef.current >= 0) {
+        startSec = Math.min(timerSeconds, Math.max(0, resumeSecRef.current));
+        resumeSecRef.current = null;
+      } else if (!Number.isFinite(startSec) || startSec > timerSeconds || startSec <= 0) {
+        startSec = timerSeconds;
+      }
+    }
+    setSecondsLeft(startSec);
+    if (!isAnswered) {
+      intervalRef.current = setInterval(() => {
+        setSecondsLeft((sec) => {
+          if (sec <= 1) {
+            clearInterval(intervalRef.current);
+            setLocked(true);
+            setStatus('timeout');
+            autoNextRef.current = setTimeout(() => handleNext(), 1200);
+            return 0;
+          }
+          return sec - 1;
+        });
+      }, 1000);
+    }
+
     return () => {
       clearInterval(intervalRef.current);
       clearTimeout(autoNextRef.current);
     };
-  }, [qIndex, finished, serverLockChecked, timerSeconds, quiz.length]);
+  }, [qIndex, finished, serverLockChecked, timerSeconds, quiz.length, answers, quiz]);
 
   useEffect(() => () => {
     clearInterval(intervalRef.current);
     clearTimeout(autoNextRef.current);
   }, []);
 
-  // Persist progress
+  // Flush on unmount/route change (captures latest values)
   useEffect(() => {
     if (!serverLockChecked || finished) return;
-    localStorage.setItem(KEYS.state, JSON.stringify({ qIndex, score }));
-  }, [qIndex, score, finished, KEYS.state, serverLockChecked]);
+    return () => {
+      try {
+        localStorage.setItem(
+          KEYS.state,
+          JSON.stringify({ qIndex, answers, secondsLeft })
+        );
+      } catch {}
+    };
+  }, [serverLockChecked, finished, qIndex, answers, secondsLeft, KEYS.state]);
+
+  // Persist progress (minimal: qIndex + answers + secondsLeft)
+  useEffect(() => {
+    if (!serverLockChecked || finished) return;
+    localStorage.setItem(KEYS.state, JSON.stringify({ qIndex, answers, secondsLeft }));
+  }, [qIndex, answers, finished, KEYS.state, serverLockChecked, secondsLeft]);
+
+  // Flush progress on tab hide/unload for reliability
+  useEffect(() => {
+    if (!serverLockChecked || finished) return;
+    const flush = () => {
+      try {
+        const snapshot = { qIndex, answers, secondsLeft };
+        localStorage.setItem(KEYS.state, JSON.stringify(snapshot));
+      } catch {}
+    };
+    window.addEventListener('visibilitychange', flush);
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('visibilitychange', flush);
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+    };
+  }, [serverLockChecked, finished, qIndex, answers, secondsLeft, KEYS.state]);
 
   const current = quiz[qIndex];
 

@@ -85,6 +85,7 @@ export default function ScoreBadge() {
         position: "fixed",
         top: { xs: 64, sm: 72 },
         right: 12,
+
         zIndex: (t) => t.zIndex.appBar - 1,
       }}
     >
@@ -126,7 +127,7 @@ export default function ScoreBadge() {
             color={error ? "default" : "warning"}
             variant="outlined"
             label={error ? "Score: --" : `Score: ${total}`}
-            sx={{ fontWeight: 800 }}
+            sx={{ fontWeight: 800, background: "antiquewhite" }}
             aria-label={
               error ? "Total score unavailable" : `Total score ${total}`
             }

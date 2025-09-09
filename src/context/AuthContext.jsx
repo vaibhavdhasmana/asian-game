@@ -39,18 +39,19 @@
 //   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 // }
 // export const useAuth = () => useContext(AuthCtx);
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 const AuthCtx = createContext(null);
 const LS_USER = "ap_user";
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
+  // Initialize from localStorage synchronously to avoid redirect flicker on refresh
+  const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem(LS_USER);
-      if (u) setUser(JSON.parse(u));
-    } catch {}
-  }, []);
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const login = (userObj) => {
     setUser(userObj);
