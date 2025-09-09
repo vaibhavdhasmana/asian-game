@@ -42,7 +42,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 const AuthCtx = createContext(null);
 const LS_USER = "ap_user";
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 

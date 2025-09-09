@@ -16,6 +16,10 @@ import WordSearchMUI from "./pages/WordSearch/WordSearchMUI";
 import { useAuth } from "./context/AuthContext";
 import SelfieMUI from "./pages/Selfie/SelfieMUI";
 import CrossWordNew from "./pages/Crossword/CrossWordNew";
+import JigsawMUI from "./pages/Jigsaw/JigsawMUI";
+import JigsawMUI2 from "./pages/Jigsaw/JigsawMUI2";
+import WordSearch2 from "./pages/WordSearch/WorldSearch2";
+import CameraTest from "./pages/Selfie/CameraTest";
 function PrivateRoute({ children }) {
   const { isAuthed } = useAuth();
   console.log("isAuth:", isAuthed);
@@ -34,18 +38,15 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/selfie" element={<SelfieMUI />} />
         <Route path="/crossword" element={<CrossWordNew />} />
+        <Route path="/jigsaw2" element={<JigsawMUI2 />} />
+        <Route path="/test/jigsaw2" element={<JigsawMUI />} />
+        <Route path="/test/word-seracht2" element={<WordSearch2 />} />
+        <Route path="/test/camera-test" element={<CameraTest />} />
 
         <Route path="/ap-admin/setting" element={<AdminSettings />} />
+        <Route path="/wordSearch" element={<WordSearchMUI />} />
         <Route
-          path="/wordSearch"
-          element={
-            <PrivateRoute>
-              <WordSearchMUI />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/play"
+          path="/JigsawMUI2"
           element={<Placeholder title="Game Screen (Coming Soon)" />}
         />
         <Route path="/lead" element={<Placeholder title="About Event" />} />

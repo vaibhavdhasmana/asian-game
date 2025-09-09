@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { baseUrl } from "../components/constant/constant";
 import { GROUPS } from "../components/constant/group";
+import { baseUrl } from "../components/constant/constant";
 // import { GROUPS } from "../components/constant/groups"; // e.g. { day2: [...], day3: [...] }
 
 export default function useGameSettings() {
   const [currentDay, setCurrentDay] = useState("day1");
-  const [groupsColors, setGroupsColors] = useState({ day2: GROUPS.day2, day3: GROUPS.day3 });
+  const [groupsColors, setGroupsColors] = useState({
+    day2: GROUPS.day2,
+    day3: GROUPS.day3,
+  });
   const [loading, setLoading] = useState(false);
 
   const normalizeColors = (val, fallbackList) => {
@@ -30,8 +33,14 @@ export default function useGameSettings() {
       // 2) groups: accept either groupsColors (arrays) or groupsPerDay (counts)
       if (data.groupsColors) {
         setGroupsColors({
-          day2: normalizeColors(data.groupsColors.day2 ?? GROUPS.day2, GROUPS.day2),
-          day3: normalizeColors(data.groupsColors.day3 ?? GROUPS.day3, GROUPS.day3),
+          day2: normalizeColors(
+            data.groupsColors.day2 ?? GROUPS.day2,
+            GROUPS.day2
+          ),
+          day3: normalizeColors(
+            data.groupsColors.day3 ?? GROUPS.day3,
+            GROUPS.day3
+          ),
         });
       } else if (data.groupsPerDay) {
         setGroupsColors({
@@ -47,7 +56,9 @@ export default function useGameSettings() {
     }
   }, []);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   return { currentDay, groupsColors, loading, refresh: fetchSettings };
 }

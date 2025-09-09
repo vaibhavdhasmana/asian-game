@@ -199,6 +199,7 @@ export default function QuizMUI() {
 
   // Pull the active day from game settings
   const gs = useGameSettings() || {};
+  console.log("gs--", gs);
   const rawFromSettings =
     gs.activeDay ||
     gs.day ||

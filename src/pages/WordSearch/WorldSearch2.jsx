@@ -1,11 +1,5 @@
 // src/pages/WordSearch/WordSearchMUI.jsx
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Card,
@@ -30,21 +24,23 @@ import useGameSettings from "../../hooks/useGameSettings";
    CONFIG
    ============================== */
 const POINTS_PER_WORD = 10;
-const GRID_SIZE = 9; // 9×9 grid
+// 9×9 grid
+const GRID_SIZE = 9;
 const GRID_GAP = 4;
 
-// Mobile sizing (hard min 360px)
-const MIN_REF_WIDTH = 360;
+// Mobile responsiveness (370px minimum reference)
+const MIN_REF_WIDTH = 370;
 const MAX_REF_WIDTH = 760;
 const CELL_MIN = 26;
 const CELL_MAX = 48;
 
+// API base
 const baseUrl =
   import.meta.env.VITE_APP_ENV === "local"
     ? "http://localhost:7000"
     : "https://api.nivabupalaunchevent.com";
 
-// Words (fit 9×9)
+// Target words (BUCKINGHAM removed to fit 9×9)
 const WORDS = ["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"];
 
 /* ==============================
@@ -52,6 +48,7 @@ const WORDS = ["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"];
    ============================== */
 const toKey = (r, c) => `${r},${c}`;
 
+// seeded RNG (stable grid per day)
 function mulberry32(seed) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -70,13 +67,17 @@ function hashString(str) {
 }
 
 /* ==============================
-   Fixed placements (no conflicts)
+   Placements for 9×9 (no overlaps)
    ============================== */
 const placements = [
-  { word: "TEXTURES", start: [0, 0], dir: [1, 1] }, // ↘
-  { word: "BRUSHES", start: [0, 8], dir: [1, 0] }, // ↓
-  { word: "LONDON", start: [8, 0], dir: [0, 1] }, // →
-  { word: "BIGBEN", start: [6, 0], dir: [0, 1] }, // →
+  // TEXTURES (8): ↘ from (0,0) → (7,7)
+  { word: "TEXTURES", start: [0, 0], dir: [1, 1] },
+  // BRUSHES (7): ↓ from (0,8) → (6,8)
+  { word: "BRUSHES", start: [0, 8], dir: [1, 0] },
+  // LONDON (6): → from (8,0) → (8,5)
+  { word: "LONDON", start: [8, 0], dir: [0, 1] },
+  // BIGBEN (6): → from (6,0) → (6,5)
+  { word: "BIGBEN", start: [6, 0], dir: [0, 1] },
 ];
 
 function buildGrid(seedString = "default") {
@@ -84,6 +85,7 @@ function buildGrid(seedString = "default") {
     Array.from({ length: GRID_SIZE }, () => "")
   );
 
+  // Place words
   placements.forEach(({ word, start, dir }) => {
     const [sr, sc] = start;
     const [dr, dc] = dir;
@@ -101,7 +103,7 @@ function buildGrid(seedString = "default") {
     }
   });
 
-  // Fill with deterministic A–Z
+  // Fill blanks with seeded random A–Z
   const rng = mulberry32(hashString(seedString));
   const A = "A".charCodeAt(0);
   for (let r = 0; r < GRID_SIZE; r++) {
@@ -118,10 +120,10 @@ function buildGrid(seedString = "default") {
 /* ==============================
    Component
    ============================== */
-export default function WordSearchMUI() {
+export default function WordSearch2() {
   const navigate = useNavigate();
 
-  // Active day (from settings)
+  // Active day from settings (same behavior as Quiz)
   const gs = useGameSettings() || {};
   const rawFromSettings =
     gs.activeDay ||
@@ -137,55 +139,54 @@ export default function WordSearchMUI() {
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
   }, [rawFromSettings]);
 
-  // LocalStorage keys (per day)
+  // Keys per day (v3 to invalidate previous caches)
   const KEYS = useMemo(
     () => ({
       user: "ap_user",
-      state: `ap_ws_state_${dayKey}_v4`,
-      done: `ap_ws_completed_${dayKey}_v4`,
-      grid: `ap_ws_grid_${dayKey}_v4`,
+      state: `ap_ws_state_${dayKey}_v3`,
+      done: `ap_ws_completed_${dayKey}_v3`,
+      grid: `ap_ws_grid_${dayKey}_v3`,
     }),
     [dayKey]
   );
 
-  /* ---------- Responsive sizing (instant, no scroll needed) ---------- */
-  const wrapRef = useRef(null);
-  const gridRef = useRef(null);
-  const [cellPx, setCellPx] = useState(32);
-  const [gridWidth, setGridWidth] = useState(MIN_REF_WIDTH);
-
-  const computeFromWidth = (availWidth) => {
-    const avail = Math.max(MIN_REF_WIDTH, Math.min(availWidth, MAX_REF_WIDTH));
-    const totalGaps = GRID_GAP * (GRID_SIZE - 1);
-    const rawCell = Math.floor((avail - totalGaps) / GRID_SIZE);
-    const nextCell = Math.max(CELL_MIN, Math.min(CELL_MAX, rawCell));
-    const nextGridW = nextCell * GRID_SIZE + totalGaps;
-    setCellPx(nextCell);
-    setGridWidth(nextGridW);
-  };
-
-  useLayoutEffect(() => {
-    const node = wrapRef.current;
-    if (!node) return;
-
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) computeFromWidth(w);
-    });
-
-    // initial measurement
-    const w0 = node.getBoundingClientRect().width;
-    if (w0 > 0) computeFromWidth(w0);
-
-    ro.observe(node);
-    return () => ro.disconnect();
-  }, []);
-
-  /* ---------- Server lock (hard block even if LS cleared) ---------- */
+  // Server lock (hard lock even if localStorage cleared)
   const [serverLockChecked, setServerLockChecked] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
-  /* ---------- Game state ---------- */
+  // Responsive sizing
+  const wrapRef = useRef(null);
+  const gridRef = useRef(null); // for touchmove hit-testing
+  const [cellPx, setCellPx] = useState(32);
+  const [gridWidth, setGridWidth] = useState(MIN_REF_WIDTH);
+
+  const computeSizes = () => {
+    const containerWidth = wrapRef.current?.clientWidth || window.innerWidth;
+    const refWidth = Math.min(
+      Math.max(MIN_REF_WIDTH, containerWidth),
+      MAX_REF_WIDTH
+    );
+    const totalGaps = GRID_GAP * (GRID_SIZE - 1);
+    const rawCell = Math.floor((refWidth - totalGaps) / GRID_SIZE);
+    const nextCell = Math.max(CELL_MIN, Math.min(CELL_MAX, rawCell));
+    const nextGridWidth = nextCell * GRID_SIZE + totalGaps;
+
+    setCellPx(nextCell);
+    setGridWidth(Math.min(nextGridWidth, Math.floor(refWidth)));
+  };
+
+  useEffect(() => {
+    computeSizes();
+    window.addEventListener("resize", computeSizes);
+    window.addEventListener("orientationchange", computeSizes);
+    return () => {
+      window.removeEventListener("resize", computeSizes);
+      window.removeEventListener("orientationchange", computeSizes);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Game state
   const [grid, setGrid] = useState(() => {
     try {
       const fromLS = localStorage.getItem(KEYS.grid);
@@ -208,18 +209,22 @@ export default function WordSearchMUI() {
   const [foundCells, setFoundCells] = useState(() => new Set());
   const [score, setScore] = useState(0);
 
-  // selection + live preview
+  // Selection + live preview
   const [isDragging, setIsDragging] = useState(false);
-  const [selectStart, setSelectStart] = useState(null); // [r,c]
-  const [selectEnd, setSelectEnd] = useState(null); // [r,c]
-  const usingTouchRef = useRef(false);
+  const [selectStart, setSelectStart] = useState(null); // [r,c] | null
+  const [selectEnd, setSelectEnd] = useState(null); // [r,c] | null
+  const usingTouchRef = useRef(false); // suppress click after touch
+
+  // Touch intent heuristic (to allow vertical scroll when intended)
+  const DRAG_THRESHOLD = 8; // px
+  const [touchStartXY, setTouchStartXY] = useState(null); // {x,y}
 
   const [snack, setSnack] = useState({ open: false, message: "" });
 
   const totalPoints = WORDS.length * POINTS_PER_WORD;
   const finished = foundWords.size === WORDS.length;
 
-  /* ---------- Helper to hit-test cell under finger ---------- */
+  // Helper: find the cell Button regardless of child
   function getCellFromPoint(x, y) {
     const el = document.elementFromPoint(x, y);
     if (!el) return null;
@@ -230,7 +235,7 @@ export default function WordSearchMUI() {
     return [Number(rAttr), Number(cAttr)];
   }
 
-  /* ---------- Server lock check ---------- */
+  /* ---------- SERVER LOCK CHECK ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -250,24 +255,13 @@ export default function WordSearchMUI() {
         if (data?.submitted) {
           localStorage.setItem(KEYS.done, "true");
           setAlreadySubmitted(true);
-          const pts = Number(data.points) || 0;
-          setScore(pts);
-          // Only show as finished if server says full points
-          if (pts >= WORDS.length * POINTS_PER_WORD) {
-            setFoundWords(new Set(WORDS));
-          } else {
-            // hydrate whatever local progress we have, but keep input disabled
-            try {
-              const raw = localStorage.getItem(KEYS.state);
-              if (raw) {
-                const saved = JSON.parse(raw);
-                if (Array.isArray(saved.foundWords))
-                  setFoundWords(new Set(saved.foundWords));
-                if (Array.isArray(saved.foundCells))
-                  setFoundCells(new Set(saved.foundCells));
-              }
-            } catch {}
-          }
+          if (typeof data.points === "number") setScore(data.points);
+          // mark all found to show Finished state
+          setFoundWords(new Set(WORDS));
+          try {
+            const fromLS = localStorage.getItem(KEYS.grid);
+            if (fromLS) setGrid(JSON.parse(fromLS));
+          } catch {}
         } else {
           localStorage.removeItem(KEYS.done);
           setAlreadySubmitted(false);
@@ -286,7 +280,7 @@ export default function WordSearchMUI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayKey, KEYS.user, KEYS.done]);
 
-  /* ---------- Load local progress ---------- */
+  /* ---------- LOAD LOCAL PROGRESS ---------- */
   useEffect(() => {
     if (!serverLockChecked || alreadySubmitted) return;
     try {
@@ -302,7 +296,7 @@ export default function WordSearchMUI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverLockChecked, alreadySubmitted, KEYS.state]);
 
-  /* ---------- Persist progress ---------- */
+  /* ---------- PERSIST PROGRESS ---------- */
   useEffect(() => {
     if (!serverLockChecked || alreadySubmitted) return;
     const payload = {
@@ -320,27 +314,49 @@ export default function WordSearchMUI() {
     KEYS.state,
   ]);
 
-  /* ---------- Native touchmove (passive:false to allow preventDefault) ---------- */
+  /* ---------- Native touchmove with intent detection ---------- */
   useEffect(() => {
     const node = gridRef.current;
     if (!node) return;
+
     const onNativeTouchMove = (ev) => {
-      if (!isDragging) return;
-      if (ev.cancelable) ev.preventDefault();
       const t = ev.touches?.[0];
-      if (!t) return;
+      if (!t || !selectStart) return;
+
+      // Decide if user intends to select (not vertical scroll)
+      if (!isDragging && touchStartXY) {
+        const dx = t.clientX - touchStartXY.x;
+        const dy = t.clientY - touchStartXY.y;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        const movedEnough = absDx > DRAG_THRESHOLD || absDy > DRAG_THRESHOLD;
+        const mostlyVertical = absDy > absDx * 1.2;
+
+        if (movedEnough && !mostlyVertical) {
+          setIsDragging(true);
+        } else {
+          // Allow page scroll while user is swiping vertically
+          return;
+        }
+      }
+
+      if (isDragging && ev.cancelable) ev.preventDefault(); // stop scroll only during selection
+
+      // hit-test to update preview while dragging
       const cell = getCellFromPoint(t.clientX, t.clientY);
       if (cell) setSelectEnd(cell);
     };
+
     node.addEventListener("touchmove", onNativeTouchMove, { passive: false });
     return () => node.removeEventListener("touchmove", onNativeTouchMove);
-  }, [isDragging]);
+  }, [isDragging, selectStart, touchStartXY]);
 
   /* ---------- Selection helpers ---------- */
   const alignedPath = (sr, sc, er, ec) => {
     const dr = er - sr;
     const dc = ec - sc;
-    if (!(dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc))) return null;
+    if (!(dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc))) return null; // only straight/diag
     const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
     const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
     const length = Math.max(Math.abs(dr), Math.abs(dc)) + 1;
@@ -359,26 +375,27 @@ export default function WordSearchMUI() {
     return new Set(path.map(([r, c]) => toKey(r, c)));
   }, [isDragging, selectStart, selectEnd]);
 
-  // const upsertScore = async (points) => {
-  //   try {
-  //     const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
-  //     const uuid = user?.uuid || user?.uniqueNo;
-  //     if (!uuid) return;
-  //     await axios.post(`${baseUrl}/api/asian-paint/score`, {
-  //       uuid,
-  //       game: "wordSearch",
-  //       day: dayKey,
-  //       points,
-  //     });
-  //   } catch (e) {
-  //     if (e?.response?.status === 409) {
-  //       localStorage.setItem(KEYS.done, "true");
-  //       setAlreadySubmitted(true);
-  //     }
-  //   }
-  // };
+  /* ---------- Score upsert (per find) ---------- */
+  const upsertScore = async (points) => {
+    try {
+      const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+      const uuid = user?.uuid || user?.uniqueNo;
+      if (!uuid) return;
+      await axios.post(`${baseUrl}/api/asian-paint/score`, {
+        uuid,
+        game: "wordSearch",
+        day: dayKey,
+        points, // server sets score.wordSearch.dayX = points
+      });
+    } catch (e) {
+      if (e?.response?.status === 409) {
+        localStorage.setItem(KEYS.done, "true");
+        setAlreadySubmitted(true);
+      }
+    }
+  };
 
-  /* ---------- Desktop pointer ---------- */
+  /* ---------- Desktop pointer (ignored during touch) ---------- */
   const onPointerDown = (r, c) => {
     if (usingTouchRef.current) return;
     if (!serverLockChecked || alreadySubmitted || finished) return;
@@ -402,23 +419,32 @@ export default function WordSearchMUI() {
     finalizeSelection(r, c);
   };
 
-  /* ---------- Mobile touch ---------- */
-  const onTouchStartCell = (r, c) => {
+  /* ---------- Mobile touch (with intent) ---------- */
+  const onTouchStartCell = (r, c, e) => {
     if (!serverLockChecked || alreadySubmitted || finished) return;
     usingTouchRef.current = true;
-    setIsDragging(true);
+    const t = e?.touches?.[0];
+    if (t) setTouchStartXY({ x: t.clientX, y: t.clientY });
+    // Do NOT set isDragging yet; wait for intent in touchmove
     setSelectStart([r, c]);
     setSelectEnd([r, c]);
   };
+
   const onTouchEndGrid = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    if (selectStart && selectEnd) {
-      finalizeSelection(selectEnd[0], selectEnd[1]);
-    } else {
+    if (!selectStart) {
+      setIsDragging(false);
       setSelectStart(null);
       setSelectEnd(null);
+      setTimeout(() => (usingTouchRef.current = false), 80);
+      setTouchStartXY(null);
+      return;
     }
+
+    if (isDragging && selectEnd) finalizeSelection(selectEnd[0], selectEnd[1]);
+    setIsDragging(false);
+    setSelectStart(null);
+    setSelectEnd(null);
+    setTouchStartXY(null);
     setTimeout(() => (usingTouchRef.current = false), 80);
   };
 
@@ -434,7 +460,7 @@ export default function WordSearchMUI() {
     finalizeSelection(r, c);
   };
 
-  /* ---------- Finalize selection ---------- */
+  /* ---------- Finalize a selection ---------- */
   const finalizeSelection = (r, c) => {
     if (!selectStart) return;
     const [sr, sc] = selectStart;
@@ -442,15 +468,16 @@ export default function WordSearchMUI() {
     setSelectStart(null);
     setSelectEnd(null);
     setIsDragging(false);
-    if (!path) return;
+    if (!path) return; // ignore invalid shapes
 
     const letters = path.map(([pr, pc]) => grid[pr][pc]).join("");
     const reversed = letters.split("").reverse().join("");
     const match = WORDS.find(
       (w) => w.length === path.length && (w === letters || w === reversed)
     );
-    if (!match || foundWords.has(match)) return;
+    if (!match || foundWords.has(match)) return; // ignore non-matches/repeats
 
+    // Mark as found
     const newFound = new Set(foundWords);
     newFound.add(match);
     setFoundWords(newFound);
@@ -458,11 +485,18 @@ export default function WordSearchMUI() {
     const newCells = new Set(foundCells);
     path.forEach(([pr, pc]) => newCells.add(toKey(pr, pc)));
     setFoundCells(newCells);
-    setScore((prev) => prev + POINTS_PER_WORD);
+
+    // +10 and update DB with the NEW total
+    setScore((prev) => {
+      const next = prev + POINTS_PER_WORD;
+      upsertScore(next);
+      return next;
+    });
+
     setSnack({ open: true, message: `Found ${match}! +${POINTS_PER_WORD}` });
   };
 
-  /* ---------- Final submit ---------- */
+  /* ---------- Final submit on completion (kept) ---------- */
   const submitScore = async (points) => {
     try {
       const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
@@ -491,12 +525,12 @@ export default function WordSearchMUI() {
     if (finished) {
       localStorage.setItem(KEYS.done, "true");
       localStorage.removeItem(KEYS.state);
-      submitScore(score);
+      submitScore(score); // ensure final persisted value
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finished, serverLockChecked, alreadySubmitted]);
 
-  /* ---------- UI ---------- */
+  // Loader while checking server
   if (!serverLockChecked) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -514,6 +548,7 @@ export default function WordSearchMUI() {
         bgcolor: "background.default",
         py: { xs: 2, md: 4 },
         mt: "50px",
+        overflowX: "hidden", // prevent sneaky horizontal overflow on tiny phones
       }}
     >
       <Grid
@@ -610,17 +645,19 @@ export default function WordSearchMUI() {
               </CardContent>
 
               <CardContent>
-                {/* Wrapper we observe for width (no need to scroll first) */}
+                {/* Wrap provides horizontal scroll if viewport < 370px */}
                 <Box
                   ref={wrapRef}
                   sx={{
                     width: "100%",
+                    maxWidth: "100vw", // don't allow container to exceed viewport
                     overflowX: "auto",
                     display: "flex",
                     justifyContent: "center",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {/* Grid */}
+                  {/* Grid: enable touch selection + live preview */}
                   <Box
                     ref={gridRef}
                     onTouchEnd={onTouchEndGrid}
@@ -631,7 +668,7 @@ export default function WordSearchMUI() {
                       gap: `${GRID_GAP}px`,
                       justifyContent: "center",
                       userSelect: "none",
-                      touchAction: "none",
+                      touchAction: "auto", // allow normal vertical scroll; we preventDefault only while selecting
                       overscrollBehavior: "contain",
                       px: 0.5,
                       py: 0.5,
@@ -641,32 +678,19 @@ export default function WordSearchMUI() {
                       row.map((ch, c) => {
                         const key = toKey(r, c);
                         const isFound = foundCells.has(key);
-                        const isPreview =
-                          isDragging &&
-                          selectStart &&
-                          selectEnd &&
-                          (() => {
-                            // inline quick check using alignedPath
-                            const path = (() => {
-                              const [sr, sc] = selectStart;
-                              const [er, ec] = selectEnd;
-                              const p = alignedPath(sr, sc, er, ec);
-                              return p || [];
-                            })();
-                            return (
-                              path.some(([rr, cc]) => rr === r && cc === c) &&
-                              !isFound
-                            );
-                          })();
+                        const isPreview = previewKeys.has(key) && !isFound;
                         return (
                           <Button
                             key={key}
                             data-r={r}
                             data-c={c}
+                            // Desktop pointer
                             onPointerDown={() => onPointerDown(r, c)}
                             onPointerEnter={() => onPointerEnter(r, c)}
                             onPointerUp={() => onPointerUp(r, c)}
-                            onTouchStart={() => onTouchStartCell(r, c)}
+                            // Mobile touch (intent captured in touchmove)
+                            onTouchStart={(e) => onTouchStartCell(r, c, e)}
+                            // Tap–tap fallback
                             onClick={() => onCellClick(r, c)}
                             variant={
                               isFound
