@@ -152,11 +152,13 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                   onChange={(e) => setUuid(e.target.value)}
                 />
 
-                <Box sx={{ mt: 2 }}>
-                  <Typography fontSize={"16px"} fontWeight={400}>
-                    New here? Click Rigister to continue.
-                  </Typography>
-                </Box>
+                {view === "login" && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography fontSize={"16px"} fontWeight={400}>
+                      New here? Click Register to continue.
+                    </Typography>
+                  </Box>
+                )}
 
                 <Box sx={{ mt: 2 }}>
                   {view === "login" ? (

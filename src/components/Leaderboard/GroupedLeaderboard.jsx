@@ -58,17 +58,19 @@ export default function GroupedLeaderboard({ day }) {
                 <Chip
                   sx={{ fontSize: { xs: "12px", md: "18px" }, fontWeight: 600 }}
                   size="small"
-                  label={g.groupKey.toUpperCase()}
+                  label={(g.label || g.groupKey || "").toUpperCase()}
                 />
               </Stack>
-              {g.groupKey === user.groupSelection.day2 && (
+              {(user?.groupKey && g.groupKey === user.groupKey) ||
+              (user?.groupSelection?.[day] &&
+                g.groupKey === user.groupSelection[day]) ? (
                 <StarsSharpIcon sx={{ color: "warning.light" }} />
-              )}
+              ) : null}
               <Chip
                 icon={<EmojiEventsIcon />}
                 color="warning"
                 variant="outlined"
-                label={`Score: ${g.groupTotal}`}
+                label={`Score: ${g.total}`}
                 sx={{ fontSize: { xs: "12px", md: "18px" }, fontWeight: 600 }}
               />
             </Stack>
@@ -131,33 +133,7 @@ export default function GroupedLeaderboard({ day }) {
                               {i + 1}. {m.name || m.uuid}
                             </Typography>
                           </Box>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: "4px",
-                              flexDirection: "row",
-                              mt: "4px",
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Crossword: {m.breakdown.crossWord}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              WordSearch: {m.breakdown.wordSearch}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Quiz: {m.breakdown.quiz}
-                            </Typography>
-                          </Box>
+                          {/* Breakdown not available from API; hide to avoid errors */}
                         </Box>
                         <Box
                           sx={{
