@@ -9,6 +9,7 @@ import {
   Button,
   Link,
   IconButton,
+  Divider,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
@@ -152,11 +153,20 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                 />
 
                 <Box sx={{ mt: 2 }}>
+                  <Typography fontSize={"16px"} fontWeight={400}>
+                    New here? Click Rigister to continue.
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
                   {view === "login" ? (
-                    <Link
+                    <Button
                       component="button"
                       type="button"
+                      variant="outlined"
+                      color="secondary"
                       underline="hover"
+                      sx={{ fontSize: "16px", fontWeight: 600 }}
                       onClick={() => {
                         if (!loading) {
                           setError(null);
@@ -166,8 +176,8 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                         }
                       }}
                     >
-                      Register
-                    </Link>
+                      Register Here
+                    </Button>
                   ) : (
                     <Link
                       component="button"
@@ -210,7 +220,7 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                   fullWidth
                   variant="outlined"
                   color="secondary"
-                  sx={{ mt: 4, fontWeight: 700 }}
+                  sx={{ fontSize: "18px", mt: 4, fontWeight: 700 }}
                 >
                   {view === "login" ? "Submit" : "Register"}
                 </LoadingButton>
