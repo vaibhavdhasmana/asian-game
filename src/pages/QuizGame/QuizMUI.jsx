@@ -20,7 +20,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useGameSettings from '../../hooks/useGameSettings';
 import { baseUrl } from '../../components/constant/constant';
 
@@ -31,17 +31,24 @@ const POINTS_PER_CORRECT = 10; // for UI only; server computes real score
 
 export default function QuizMUI() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const gs = useGameSettings() || {};
+  const queryDay = (searchParams.get('day') || '').toLowerCase();
   const rawDay =
     gs.activeDay || gs.day || gs.currentDay || gs.gameDay || gs.settings?.activeDay || gs.settings?.day || 'day1';
   const dayKey = useMemo(() => {
-    const v = String(rawDay).toLowerCase();
+    const v = queryDay || String(rawDay).toLowerCase();
     return ['day1', 'day2', 'day3'].includes(v) ? v : 'day1';
-  }, [rawDay]);
+  }, [queryDay, rawDay]);
+  const slot = useMemo(() => {
+    const s = parseInt(searchParams.get('slot'), 10);
+    if (Number.isFinite(s) && s > 0) return s;
+    return Number(gs.currentSlot) || 1;
+  }, [searchParams, gs.currentSlot]);
 
   const KEYS = useMemo(
-    () => ({ user: 'ap_user', state: `ap_quiz_state_${dayKey}`, done: `ap_quiz_completed_${dayKey}` }),
-    [dayKey]
+    () => ({ user: 'ap_user', state: `ap_quiz_state_${dayKey}_s${slot}`, done: `ap_quiz_completed_${dayKey}_s${slot}` }),
+    [dayKey, slot]
   );
 
   // Remote content
@@ -74,7 +81,7 @@ export default function QuizMUI() {
         const user = JSON.parse(localStorage.getItem('ap_user') || 'null');
         const uuid = user?.uuid || user?.uniqueNo;
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
-          params: { day: dayKey, game: 'quiz', uuid },
+          params: { day: dayKey, game: 'quiz', uuid, slot },
         });
         const qs = data?.payload?.questions || [];
         setQuiz(qs);
@@ -88,7 +95,7 @@ export default function QuizMUI() {
         setTimerSeconds(DEFAULT_TIMER_SECONDS);
       }
     })();
-  }, [dayKey]);
+  }, [dayKey, slot]);
 
   // Prepare answers array
   useEffect(() => {
@@ -107,12 +114,15 @@ export default function QuizMUI() {
           return;
         }
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/score/status`, {
-          params: { uuid, game: 'quiz', day: dayKey },
+          params: { uuid, game: 'quiz', day: dayKey, slot },
         });
         if (data?.submitted) {
           localStorage.setItem(KEYS.done, 'true');
           setAlreadySubmitted(true);
-          setFinished(true);
+          // Do not force finished UI on refresh; keep quiz screen locked instead
+          if (typeof data.points === 'number') {
+            setScore(Number(data.points) || 0);
+          }
         } else {
           localStorage.removeItem(KEYS.done);
           setAlreadySubmitted(false);
@@ -125,7 +135,14 @@ export default function QuizMUI() {
         setServerLockChecked(true);
       }
     })();
-  }, [dayKey, KEYS.user, KEYS.done]);
+  }, [dayKey, slot, KEYS.user, KEYS.done]);
+
+  // On day/slot change, reset lock flags until status/content are refetched
+  useEffect(() => {
+    setServerLockChecked(false);
+    setAlreadySubmitted(false);
+    setFinished(false);
+  }, [dayKey, slot]);
 
   // Load local progress (resume where left using qIndex + answers + secondsLeft if unanswered)
   useEffect(() => {
@@ -156,7 +173,7 @@ export default function QuizMUI() {
 
   // Timer (reset per question; recompute locked from answers)
   useEffect(() => {
-    if (!serverLockChecked || finished || quiz.length === 0) return;
+    if (!serverLockChecked || finished || alreadySubmitted || quiz.length === 0) return;
     clearInterval(intervalRef.current);
 
     // Derive current state from saved answers
@@ -172,15 +189,19 @@ export default function QuizMUI() {
     const s = answers.reduce((acc, a, i) => acc + (a === quiz[i]?.correctIndex ? POINTS_PER_CORRECT : 0), 0);
     setScore(s);
 
-    // For unanswered question, start timer; prefer saved seconds and avoid overriding a restored value
-    let startSec = secondsLeft;
+    // Always start each new (unanswered) question from default timer unless restoring this question specifically
+    let startSec;
     if (!isAnswered) {
       if (typeof resumeSecRef.current === 'number' && resumeSecRef.current >= 0) {
+        // restore exact time only for the same question (e.g., after refresh)
         startSec = Math.min(timerSeconds, Math.max(0, resumeSecRef.current));
-        resumeSecRef.current = null;
-      } else if (!Number.isFinite(startSec) || startSec > timerSeconds || startSec <= 0) {
+      } else {
         startSec = timerSeconds;
       }
+      resumeSecRef.current = null;
+    } else {
+      // answered/locked questions keep whatever (timer won't run)
+      startSec = secondsLeft;
     }
     setSecondsLeft(startSec);
     if (!isAnswered) {
@@ -250,7 +271,7 @@ export default function QuizMUI() {
   const current = quiz[qIndex];
 
   const handleOptionClick = (idx) => {
-    if (!serverLockChecked || locked || finished) return;
+    if (!serverLockChecked || locked || finished || alreadySubmitted) return;
     setSelected(idx);
     const isCorrect = idx === current?.correctIndex;
     setLocked(true);
@@ -266,6 +287,7 @@ export default function QuizMUI() {
 
   const handleNext = () => {
     clearTimeout(autoNextRef.current);
+    if (finished || alreadySubmitted) return;
     if (qIndex + 1 < quiz.length) setQIndex((i) => i + 1);
     else finishQuiz();
   };
@@ -279,6 +301,7 @@ export default function QuizMUI() {
         uuid,
         day: dayKey,
         game: 'quiz',
+        slot,
         contentVersion,
         payload: { answers },
       });
@@ -308,6 +331,26 @@ export default function QuizMUI() {
     return (
       <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
         <Typography>Checking attempt status...</Typography>
+      </Box>
+    );
+  }
+  // Dedicated locked screen: user already submitted this slot
+  if (alreadySubmitted && !finished) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
+        <Card sx={{ maxWidth: 520 }}>
+          <CardContent>
+            <Stack spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={800} align="center">
+                Locked Until Next Slot
+              </Typography>
+              <Typography color="text.secondary" align="center">
+                You have already submitted for this day and slot. Please wait for the next slot to play again.
+              </Typography>
+              <Button variant="contained" onClick={() => navigate('/')}>Home</Button>
+            </Stack>
+          </CardContent>
+        </Card>
       </Box>
     );
   }

@@ -34,7 +34,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 import { baseUrl } from "../../components/constant/constant";
 
@@ -91,11 +91,13 @@ const bgPosForTile = (tileId, widthPx, heightPx) => {
 
 export default function JigsawMUI() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Day from settings
   const gs = useGameSettings() || {};
+  const queryDay = (searchParams.get("day") || "").toLowerCase();
   const rawDay =
     gs.activeDay ||
     gs.day ||
@@ -105,9 +107,14 @@ export default function JigsawMUI() {
     gs.settings?.day ||
     "day1";
   const dayKey = useMemo(() => {
-    const v = String(rawDay).toLowerCase();
+    const v = (queryDay || String(rawDay).toLowerCase());
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
-  }, [rawDay]);
+  }, [queryDay, rawDay]);
+  const slot = useMemo(() => {
+    const s = parseInt(searchParams.get("slot"), 10);
+    if (Number.isFinite(s) && s > 0) return s;
+    return Number(gs.currentSlot) || 1;
+  }, [searchParams, gs.currentSlot]);
 
   // Per-day config (with server override)
   const cfg = DAY_CFG[dayKey] || DAY_CFG.day1;
@@ -122,7 +129,7 @@ export default function JigsawMUI() {
         const user = JSON.parse(localStorage.getItem("ap_user") || "null");
         const uuid = user?.uuid || user?.uniqueNo;
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
-          params: { day: dayKey, game: "jigsaw", uuid },
+      params: { day: dayKey, game: "jigsaw", uuid, slot },
         });
         const p = data?.payload || {};
         setServerCfg({
@@ -132,7 +139,7 @@ export default function JigsawMUI() {
         });
       } catch {}
     })();
-  }, [dayKey]);
+  }, [dayKey, slot]);
 
   const puzzleImg = serverCfg.imageUrl || cfg.image;
   const POINTS_PER_TILE = serverCfg.pointsPerTile || cfg.pointsPerTile;
@@ -142,13 +149,60 @@ export default function JigsawMUI() {
   const KEYS = useMemo(
     () => ({
       user: "ap_user",
-      state: `ap_jigsaw_state_${dayKey}_v4`,
-      timer: `ap_jigsaw_timer_${dayKey}_v4`,
-      done: `ap_jigsaw_completed_${dayKey}_v4`,
-      final: `ap_jigsaw_final_${dayKey}_v4`,
+      state: `ap_jigsaw_state_${dayKey}_s${slot}_v4`,
+      timer: `ap_jigsaw_timer_${dayKey}_s${slot}_v4`,
+      done: `ap_jigsaw_completed_${dayKey}_s${slot}_v4`,
+      final: `ap_jigsaw_final_${dayKey}_s${slot}_v4`,
     }),
-    [dayKey]
+    [dayKey, slot]
   );
+
+  // Reset lock flags when day/slot changes
+  useEffect(() => {
+    setServerLockChecked(false);
+    setAlreadySubmitted(false);
+  }, [dayKey, slot]);
+
+  // Ensure status check re-runs on slot changes (idempotent)
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
+        const uuid = user?.uuid || user?.uniqueNo;
+        if (!uuid) {
+          setServerLockChecked(true);
+          setAlreadySubmitted(false);
+          return;
+        }
+        const { data } = await axios.get(`${baseUrl}/api/asian-paint/score/status`, {
+          params: { uuid, game: "jigsaw", day: dayKey, slot },
+        });
+        if (data?.submitted) {
+          localStorage.setItem(KEYS.done, "true");
+          if (typeof data.points === "number") {
+            localStorage.setItem(KEYS.final, String(data.points));
+          }
+          setAlreadySubmitted(true);
+          setOrder(solvedOrder);
+          setCredited(new Set(solvedOrder));
+          setScore(
+            typeof data.points === "number"
+              ? data.points
+              : ROWS * COLS * POINTS_PER_TILE
+          );
+          setSecondsLeft(0);
+          setTimeUp(true);
+        } else {
+          localStorage.removeItem(KEYS.done);
+          setAlreadySubmitted(false);
+        }
+      } catch {}
+      finally {
+        setServerLockChecked(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayKey, slot]);
 
   /* ---------- Sizing (bulletproof, no half tiles) ---------- */
   const wrapRef = useRef(null);
@@ -256,7 +310,7 @@ export default function JigsawMUI() {
         const { data } = await axios.get(
           `${baseUrl}/api/asian-paint/score/status`,
           {
-            params: { uuid, game: "jigsaw", day: dayKey },
+            params: { uuid, game: "jigsaw", day: dayKey, slot },
           }
         );
 
@@ -367,6 +421,7 @@ export default function JigsawMUI() {
         uuid,
         day: dayKey,
         game: "jigsaw",
+        slot,
         contentVersion: 0,
         payload: {
           tiles: credited.size,
@@ -376,6 +431,10 @@ export default function JigsawMUI() {
         },
       });
       setSnack({ open: true, message: "Score submitted!" });
+      localStorage.setItem(KEYS.done, "true");
+      localStorage.setItem(KEYS.final, String(score));
+      setAlreadySubmitted(true);
+      setTimeUp(true);
     } catch (e) {
       if (e?.response?.status === 409) {
         setSnack({ open: true, message: "Already submitted" });
@@ -390,9 +449,13 @@ export default function JigsawMUI() {
             uuid,
             game: "jigsaw",
             day: dayKey,
+            slot,
             points,
           });
           setSnack({ open: true, message: "Score submitted!" });
+          localStorage.setItem(KEYS.done, "true");
+          localStorage.setItem(KEYS.final, String(score));
+          setAlreadySubmitted(true);
         } catch {
           setSnack({ open: true, message: "Saved locally (offline)" });
         }
@@ -832,12 +895,7 @@ export default function JigsawMUI() {
       </Grid>
 
 
-      {/* Debug: Reset local progress (does not bypass server lock) */}
-      <Box sx={{ position: "fixed", top: 12, right: 12, zIndex: 100 }}>
-        <Button size="small" variant="outlined" onClick={resetLocal} startIcon={<ReplayIcon />}>
-          Reset Local
-        </Button>
-      </Box>      {/* Reference Image Dialog */}
+      {/* Reference Image Dialog */}
       <Dialog
         open={refOpen}
         onClose={() => setRefOpen(false)}

@@ -1,6 +1,6 @@
 ﻿// src/pages/GameDashboard/GameDashboard.jsx
 import * as React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Snackbar, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 import ScoreBadge from "../../components/ScoreBadge/ScoreBadge";
@@ -18,6 +18,8 @@ import quizIcon from "../../assets/quizicon.png";
 import wordSearchIcon from "../../assets/wordSearchIcon.png";
 import selfieIcon from "../../assets/selfieIcon.png";
 import jigsaw from "../../assets/jigsaw.png";
+import axios from "axios";
+import { baseUrl } from "../../components/constant/constant";
 
 const QUIZ_DONE_KEY = "ap_quiz_day1_completed";
 const GROUP_KEY = "ap_group_key";
@@ -62,7 +64,7 @@ const GAMES = [
 export default function GameDashboard() {
   const navigate = useNavigate();
   const { isAuthed, user, setUser } = useAuth();
-  const { currentDay } = useGameSettings();
+  const { currentDay, currentSlot, refresh } = useGameSettings();
 
   const [showGroup, setShowGroup] = React.useState(false);
   const [quizDone, setQuizDone] = React.useState(
@@ -75,6 +77,8 @@ export default function GameDashboard() {
     () => GAMES.find((g) => g.key === launcherKey) || null,
     [launcherKey]
   );
+
+  const [snack, setSnack] = React.useState({ open: false, message: "" });
 
   // Prompt group selection on day2/day3con if not set
   React.useEffect(() => {
@@ -103,11 +107,31 @@ export default function GameDashboard() {
   }, [setUser]);
 
   // Handlers
-  const openLauncher = (key) => () => setLauncherKey(key);
+  const openLauncher = (key) => async () => {
+    try {
+      await (refresh?.());
+    } catch {}
+    setLauncherKey(key);
+  };
   const closeLauncher = () => setLauncherKey(null);
-  const confirmLauncher = () => {
+  const confirmLauncher = async () => {
+    // Fetch latest settings and use them immediately to avoid stale day/slot
+    let latest = null;
+    try {
+      latest = await (refresh?.());
+    } catch {}
     if (!currentGame) return;
-    navigate(currentGame.route);
+
+    const dayKey = String(latest?.currentDay || currentDay || "day1").toLowerCase();
+    const slot = Number(latest?.currentSlot || currentSlot || 1);
+    const userObj = user || JSON.parse(localStorage.getItem("ap_user") || "null");
+    const uuid = userObj?.uuid || userObj?.uniqueNo || null;
+
+    const mapGameKey = (k) => (k === "wordsearch" ? "wordSearch" : k);
+    const gameParam = mapGameKey(currentGame.key);
+
+    // Pass day and slot via query params so the game reads them immediately
+    navigate(`${currentGame.route}?day=${encodeURIComponent(dayKey)}&slot=${slot}`);
     setLauncherKey(null);
   };
 
@@ -215,6 +239,16 @@ export default function GameDashboard() {
           backdropFilter: "saturate(180%) blur(12px)",
         }}
       />
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={1800}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+      >
+        <Alert severity="warning" variant="filled" sx={{ width: "100%" }}>
+          {snack.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 }

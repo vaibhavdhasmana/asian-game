@@ -44,15 +44,17 @@ function scoreGeneric(game, payload) {
 router.get('/score/status', async (req, res) => {
   const { uuid, day, game } = req.query;
   if (!uuid || !day || !game) return res.status(400).json({ message: 'uuid, day, game required' });
-  const doc = await Submission.findOne({ uuid, day, game });
+  const slot = req.query.slot != null ? Number(req.query.slot) : 1;
+  const doc = await Submission.findOne({ uuid, day, game, slot });
   res.json({ submitted: !!doc?.final, points: doc?.score || 0 });
 });
 
 // Progress upsert
 router.post('/score/progress', async (req, res) => {
   try {
-    const { uuid, day, game, contentVersion, payload } = req.body || {};
+    const { uuid, day, game, slot: slotRaw, contentVersion, payload } = req.body || {};
     if (!uuid || !day || !game) return res.status(400).json({ message: 'uuid, day, game required' });
+    const slot = slotRaw != null ? Number(slotRaw) : 1;
     let score = 0;
     if (game === 'quiz') {
       if (contentVersion == null) return res.status(400).json({ message: 'contentVersion required for quiz' });
@@ -60,7 +62,7 @@ router.post('/score/progress', async (req, res) => {
     } else {
       score = scoreGeneric(game, payload);
     }
-    let doc = await Submission.findOne({ uuid, day, game });
+    let doc = await Submission.findOne({ uuid, day, game, slot });
     if (doc && doc.final) return res.status(409).json({ message: 'Already submitted' });
     if (doc) {
       doc.score = Math.max(doc.score || 0, score);
@@ -70,7 +72,7 @@ router.post('/score/progress', async (req, res) => {
       return res.json({ score: doc.score, final: false });
     }
     const ver = contentVersion != null ? contentVersion : Date.now();
-    doc = await Submission.create({ uuid, day, game, contentVersion: ver, score, meta: payload || {}, final: false });
+    doc = await Submission.create({ uuid, day, game, slot, contentVersion: ver, score, meta: payload || {}, final: false });
     res.json({ score: doc.score, final: false });
   } catch (e) {
     res.status(500).json({ message: 'progress failed', error: String(e) });
@@ -80,10 +82,11 @@ router.post('/score/progress', async (req, res) => {
 // Final submit
 router.post('/score/submit', async (req, res) => {
   try {
-    const { uuid, day, game, contentVersion, payload } = req.body || {};
+    const { uuid, day, game, slot: slotRaw, contentVersion, payload } = req.body || {};
     if (!uuid || !day || !game || contentVersion == null)
       return res.status(400).json({ message: 'uuid, day, game, contentVersion required' });
-    const exists = await Submission.findOne({ uuid, day, game });
+    const slot = slotRaw != null ? Number(slotRaw) : 1;
+    const exists = await Submission.findOne({ uuid, day, game, slot });
     if (exists && exists.final) return res.status(409).json({ message: 'Already submitted' });
     let score = 0;
     if (game === 'quiz') score = await scoreQuiz({ uuid, day, contentVersion, answers: payload?.answers });
@@ -96,7 +99,7 @@ router.post('/score/submit', async (req, res) => {
       exists.final = true;
       sub = await exists.save();
     } else {
-      sub = await Submission.create({ uuid, day, game, contentVersion, score, meta: payload || {}, final: true });
+      sub = await Submission.create({ uuid, day, game, slot, contentVersion, score, meta: payload || {}, final: true });
     }
     res.json({ score: sub.score, final: true });
   } catch (e) {
@@ -107,17 +110,18 @@ router.post('/score/submit', async (req, res) => {
 // Legacy points (treat as progress)
 router.post('/score', async (req, res) => {
   try {
-    const { uuid, day, game, points } = req.body || {};
+    const { uuid, day, game, slot: slotRaw, points } = req.body || {};
     if (!uuid || !day || !game || typeof points !== 'number')
       return res.status(400).json({ message: 'uuid, day, game, points required' });
-    const doc = await Submission.findOne({ uuid, day, game });
+    const slot = slotRaw != null ? Number(slotRaw) : 1;
+    const doc = await Submission.findOne({ uuid, day, game, slot });
     if (doc && doc.final) return res.status(409).json({ message: 'Already submitted' });
     if (doc) {
       doc.score = Math.max(doc.score || 0, Math.floor(points));
       await doc.save();
       return res.json({ score: doc.score, final: !!doc.final });
     }
-    const sub = await Submission.create({ uuid, day, game, contentVersion: Date.now(), score: Math.max(0, Math.floor(points)), meta: { legacy: true }, final: false });
+    const sub = await Submission.create({ uuid, day, game, slot, contentVersion: Date.now(), score: Math.max(0, Math.floor(points)), meta: { legacy: true }, final: false });
     res.json({ score: sub.score, final: false });
   } catch (e) {
     res.status(500).json({ message: 'legacy submit failed', error: String(e) });

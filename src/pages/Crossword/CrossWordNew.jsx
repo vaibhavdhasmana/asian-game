@@ -196,6 +196,7 @@ export default function CrossWordNew() {
     const v = String(rawDay).toLowerCase();
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
   }, [rawDay]);
+  const slot = Number(gs.currentSlot) || 1;
 
   const KEYS = useMemo(
     () => ({
@@ -296,7 +297,7 @@ export default function CrossWordNew() {
         const { data } = await axios.get(
           `${baseUrl}/api/asian-paint/score/status`,
           {
-            params: { uuid, game: "crossWord", day: dayKey },
+            params: { uuid, game: "crossWord", day: dayKey, slot },
           }
         );
         if (data?.submitted) {

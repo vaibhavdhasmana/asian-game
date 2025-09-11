@@ -75,6 +75,7 @@ import groupRoutes from "./routes/group.js";
 import contentRoutes from "./routes/content.js";
 import scoreRoutes from "./routes/score.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
+import Submission from "./models/Submission.js";
 
 const app = express();
 const PORT = process.env.PORT || 7000;
@@ -127,6 +128,30 @@ async function start() {
 
     await mongoose.connect(url, { autoIndex: true });
     console.log("Mongo connected");
+
+    // Ensure unique index includes slot; drop legacy index without slot if present
+    try {
+      const idx = await Submission.collection.indexes();
+      const legacy = idx.find(
+        (i) => i.name === "uuid_1_day_1_game_1" && i.unique === true
+      );
+      if (legacy) {
+        try {
+          await Submission.collection.dropIndex("uuid_1_day_1_game_1");
+          console.log("Dropped legacy unique index uuid_1_day_1_game_1");
+        } catch (e) {
+          console.warn("Drop legacy index failed (may not exist):", e?.message || e);
+        }
+      }
+      // Create the correct compound unique index including slot
+      await Submission.collection.createIndex(
+        { uuid: 1, day: 1, game: 1, slot: 1 },
+        { unique: true, name: "uuid_1_day_1_game_1_slot_1" }
+      );
+      console.log("Ensured unique index on (uuid, day, game, slot)");
+    } catch (e) {
+      console.warn("Index ensure failed:", e?.message || e);
+    }
 
     app.listen(PORT, () =>
       console.log(`API listening on ${process.env.NODE_ENV}:${PORT}`)

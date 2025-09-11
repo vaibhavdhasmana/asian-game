@@ -6,8 +6,10 @@ import { baseUrl } from "../components/constant/constant";
 
 export default function useGameSettings() {
   const [currentDay, setCurrentDay] = useState("day1");
+  const [currentSlot, setCurrentSlot] = useState(1);
   const [groups, setGroups] = useState({ day2: GROUPS.day2, day3: GROUPS.day3 });
   const [loading, setLoading] = useState(false);
+  // No polling by default to avoid server load. Call refresh() on game launch.
 
   const normalizeColors = (val, fallbackList) => {
     // val can be an array (already colors) or a number (count)
@@ -24,37 +26,50 @@ export default function useGameSettings() {
       const res = await axios.get(`${baseUrl}/api/admin/public/settings`);
       const data = res.data || {};
 
-      // 1) current day
-      if (data.currentDay) setCurrentDay(String(data.currentDay).toLowerCase());
+      // Next values to both set in state and return to caller
+      const nextDay = data.currentDay
+        ? String(data.currentDay).toLowerCase()
+        : currentDay;
+      const nextSlot = data.currentSlot != null
+        ? Number(data.currentSlot) || 1
+        : currentSlot;
 
-      // 2) groups: support new shape { groups: { day2:[{key}], day3:[{key}] } }
+      let nextGroups = { day2: GROUPS.day2, day3: GROUPS.day3 };
       if (data.groups && (Array.isArray(data.groups.day2) || Array.isArray(data.groups.day3))) {
-        setGroups({
+        nextGroups = {
           day2: (data.groups.day2 || []).map((g) => g.key || g).filter(Boolean),
           day3: (data.groups.day3 || []).map((g) => g.key || g).filter(Boolean),
-        });
+        };
       } else if (data.groupsColors) {
         // legacy fallback
-        setGroups({
+        nextGroups = {
           day2: normalizeColors(data.groupsColors.day2 ?? GROUPS.day2, GROUPS.day2),
           day3: normalizeColors(data.groupsColors.day3 ?? GROUPS.day3, GROUPS.day3),
-        });
+        };
       } else if (data.groupsPerDay) {
-        setGroups({
+        nextGroups = {
           day2: normalizeColors(data.groupsPerDay.day2, GROUPS.day2),
           day3: normalizeColors(data.groupsPerDay.day3, GROUPS.day3),
-        });
-      } else {
-        setGroups({ day2: GROUPS.day2, day3: GROUPS.day3 });
+        };
       }
+
+      // Commit to state
+      setCurrentDay(nextDay);
+      setCurrentSlot(nextSlot);
+      setGroups(nextGroups);
+
+      // Return so callers can use the freshest values immediately
+      return { currentDay: nextDay, currentSlot: nextSlot, groups: nextGroups };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentDay, currentSlot]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
 
-  return { currentDay, groups, loading, refresh: fetchSettings };
+  // Intentionally no polling. The dashboard calls refresh() on icon click before routing.
+
+  return { currentDay, currentSlot, groups, loading, refresh: fetchSettings };
 }

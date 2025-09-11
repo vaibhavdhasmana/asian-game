@@ -35,7 +35,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
 import { baseUrl } from "../../components/constant/constant";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 
 /* -------------------------------------------------------
@@ -205,11 +205,13 @@ const svgImageOffset = (row, col) => ({
 
 export default function JigsawMUI2() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Day from settings
   const gs = useGameSettings() || {};
+  const queryDay = (searchParams.get("day") || "").toLowerCase();
   const rawDay =
     gs.activeDay ||
     gs.day ||
@@ -219,26 +221,49 @@ export default function JigsawMUI2() {
     gs.settings?.day ||
     "day1";
   const dayKey = useMemo(() => {
-    const v = String(rawDay).toLowerCase();
+    const v = (queryDay || String(rawDay).toLowerCase());
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
-  }, [rawDay]);
+  }, [queryDay, rawDay]);
+  const slot = useMemo(() => {
+    const s = parseInt(searchParams.get("slot"), 10);
+    if (Number.isFinite(s) && s > 0) return s;
+    return Number(gs.currentSlot) || 1;
+  }, [searchParams, gs.currentSlot]);
 
-  // Per-day config
+  // Per-day config + server overrides
   const cfg = DAY_CFG[dayKey] || DAY_CFG.day1;
-  const puzzleImg = cfg.image;
-  const POINTS_PER_TILE = cfg.pointsPerTile;
-  const TIMER_SECONDS = cfg.timerSeconds;
+  const [serverCfg, setServerCfg] = useState({ imageUrl: null, pointsPerTile: null, timerSeconds: null });
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("ap_user") || "null");
+        const uuid = user?.uuid || user?.uniqueNo;
+        const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
+          params: { day: dayKey, game: 'jigsaw', uuid, slot },
+        });
+        const p = data?.payload || {};
+        setServerCfg({
+          imageUrl: p.imageUrl || null,
+          pointsPerTile: Number(p.pointsPerTile) || null,
+          timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
+        });
+      } catch {}
+    })();
+  }, [dayKey, slot]);
+  const puzzleImg = serverCfg.imageUrl || cfg.image;
+  const POINTS_PER_TILE = serverCfg.pointsPerTile || cfg.pointsPerTile;
+  const TIMER_SECONDS = serverCfg.timerSeconds || cfg.timerSeconds;
 
   // Keys (includes final score to lock on reload)
   const KEYS = useMemo(
     () => ({
       user: "ap_user",
-      state: `ap_jigsaw_state_${dayKey}_v4`,
-      timer: `ap_jigsaw_timer_${dayKey}_v4`,
-      done: `ap_jigsaw_completed_${dayKey}_v4`,
-      final: `ap_jigsaw_final_${dayKey}_v4`,
+      state: `ap_jigsaw_state_${dayKey}_s${slot}_v4`,
+      timer: `ap_jigsaw_timer_${dayKey}_s${slot}_v4`,
+      done: `ap_jigsaw_completed_${dayKey}_s${slot}_v4`,
+      final: `ap_jigsaw_final_${dayKey}_s${slot}_v4`,
     }),
-    [dayKey]
+    [dayKey, slot]
   );
 
   /* ---------- Sizing (no half tiles) ---------- */
@@ -312,6 +337,14 @@ export default function JigsawMUI2() {
   const timePct = Math.max(0, (secondsLeft / TIMER_SECONDS) * 100);
   const progressPct = (credited.size / totalTiles) * 100;
 
+  // Reset lock flags when day/slot changes so we re-check correctly
+  useEffect(() => {
+    setServerLockChecked(false);
+    setAlreadySubmitted(false);
+    setTimeUp(false);
+    submittedRef.current = false;
+  }, [dayKey, slot]);
+
   /* ---------- Server lock + resume (trust local done first) ---------- */
   useEffect(() => {
     (async () => {
@@ -342,7 +375,7 @@ export default function JigsawMUI2() {
 
         const { data } = await axios.get(
           `${baseUrl}/api/asian-paint/score/status`,
-          { params: { uuid, game: "jigsaw", day: dayKey } }
+          { params: { uuid, game: "jigsaw", day: dayKey, slot } }
         );
 
         if (data?.submitted) {
@@ -389,8 +422,7 @@ export default function JigsawMUI2() {
         setServerLockChecked(true);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayKey]);
+  }, [dayKey, slot, KEYS.done, KEYS.final, KEYS.state, KEYS.timer]);
 
   // Persist local progress
   useEffect(() => {
@@ -450,6 +482,7 @@ export default function JigsawMUI2() {
         uuid,
         game: "jigsaw",
         day: dayKey,
+        slot,
         points,
       });
     } catch (e) {
@@ -469,6 +502,7 @@ export default function JigsawMUI2() {
         uuid,
         game: "jigsaw",
         day: dayKey,
+        slot,
         points,
       });
       setSnack({ open: true, message: "Score submitted!" });

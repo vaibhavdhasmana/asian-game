@@ -14,6 +14,7 @@ import {
   Grid,
 } from "@mui/material";
 import UploadCard from "../../components/admin/UploadCard";
+import ContentBrowser from "../../components/admin/ContentBrowser";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { baseUrl } from "../../components/constant/constant";
@@ -24,6 +25,9 @@ export default function AdminSettings() {
   const adminKey = import.meta.env.VITE_ADMIN_KEY || ""; // dev only
   console.log("adminKey", adminKey);
   const [currentDay, setCurrentDay] = React.useState("day1");
+  const [currentSlot, setCurrentSlot] = React.useState(1);
+  const [slotsPerDay, setSlotsPerDay] = React.useState({ day1: 1, day2: 1, day3: 1 });
+  const [slotsDraft, setSlotsDraft] = React.useState("");
 
   React.useEffect(() => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
@@ -31,8 +35,17 @@ export default function AdminSettings() {
       .get(`${baseUrl}/api/admin/settings`, { headers })
       .then((res) => {
         setCurrentDay(res.data?.currentDay || "day1");
+        setCurrentSlot(res.data?.currentSlot || 1);
+        setSlotsPerDay(res.data?.slotsPerDay || { day1: 1, day2: 1, day3: 1 });
+        const spd = res.data?.slotsPerDay || { day1: 1, day2: 1, day3: 1 };
+        setSlotsDraft(String(spd[tab] ?? ""));
       });
   }, [adminKey, user]);
+
+  // Keep draft in sync when switching tabs or when server state changes
+  React.useEffect(() => {
+    setSlotsDraft(String(slotsPerDay[tab] ?? ""));
+  }, [tab, slotsPerDay]);
 
   const saveDay = async () => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
@@ -40,6 +53,20 @@ export default function AdminSettings() {
   };
   const onAnyUpload = () => {
     // toast or refresh status if needed
+  };
+
+  const saveSlot = async () => {
+    const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
+    await axios.post(`${baseUrl}/api/admin/settings/slot`, { currentSlot }, { headers });
+  };
+  const saveSlotsPerDay = async () => {
+    const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
+    const nRaw = slotsDraft.trim();
+    const nParsed = Number(nRaw);
+    const n = Number.isFinite(nParsed) && nParsed > 0 ? Math.floor(nParsed) : 1;
+    await axios.post(`${baseUrl}/api/admin/settings/slots-per-day`, { day: tab, slots: n }, { headers });
+    setSlotsPerDay((s) => ({ ...s, [tab]: n }));
+    setSlotsDraft(String(n));
   };
 
   return (
@@ -59,7 +86,12 @@ export default function AdminSettings() {
           </Alert>
         )}
 
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1}
+          alignItems={{ xs: "stretch", md: "center" }}
+          sx={{ flexWrap: "wrap" }}
+        >
           <TextField
             select
             size="small"
@@ -74,6 +106,29 @@ export default function AdminSettings() {
           <Button variant="contained" onClick={saveDay}>
             Save
           </Button>
+          <TextField
+            size="small"
+            type="number"
+            label={`Slots (${tab})`}
+            inputProps={{ min: 1 }}
+            value={slotsDraft}
+            onChange={(e) => setSlotsDraft(e.target.value)}
+            sx={{ ml: { md: 2 } }}
+          />
+          <Button variant="outlined" onClick={saveSlotsPerDay}>Save Slots</Button>
+          <TextField
+            select
+            size="small"
+            label="Active Slot"
+            value={currentSlot}
+            onChange={(e) => setCurrentSlot(Number(e.target.value))}
+            sx={{ ml: { md: 2 } }}
+          >
+            {Array.from({ length: slotsPerDay[currentDay] || 1 }, (_, i) => i + 1).map((n) => (
+              <MenuItem key={n} value={n}>{n}</MenuItem>
+            ))}
+          </TextField>
+          <Button variant="outlined" onClick={saveSlot}>Activate</Button>
         </Stack>
       </Stack>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
@@ -94,6 +149,7 @@ export default function AdminSettings() {
             title="Quiz"
             day="day1"
             game="quiz"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -102,6 +158,7 @@ export default function AdminSettings() {
             title="Word Search"
             day="day1"
             game="wordSearch"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -110,6 +167,7 @@ export default function AdminSettings() {
             title="Jigsaw (Image or JSON)"
             day="day1"
             game="jigsaw"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -123,6 +181,7 @@ export default function AdminSettings() {
             title="Quiz"
             day="day2"
             game="quiz"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -131,6 +190,7 @@ export default function AdminSettings() {
             title="Word Search"
             day="day2"
             game="wordSearch"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -139,6 +199,7 @@ export default function AdminSettings() {
             title="Jigsaw (Image or JSON)"
             day="day2"
             game="jigsaw"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -152,6 +213,7 @@ export default function AdminSettings() {
             title="Quiz"
             day="day3"
             game="quiz"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -160,6 +222,7 @@ export default function AdminSettings() {
             title="Word Search"
             day="day3"
             game="wordSearch"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
@@ -168,12 +231,21 @@ export default function AdminSettings() {
             title="Jigsaw (Image or JSON)"
             day="day3"
             game="jigsaw"
+            slot={currentSlot}
             adminKey={adminKey}
             adminUuid={user?.isAdmin ? user?.uuid : undefined}
             onDone={onAnyUpload}
           />
         </Box>
       )}
+
+      <Box sx={{ mt: 3 }}>
+        <ContentBrowser
+          adminKey={adminKey}
+          adminUuid={user?.isAdmin ? user?.uuid : undefined}
+          slotsPerDay={slotsPerDay}
+        />
+      </Box>
     </Container>
   );
 }

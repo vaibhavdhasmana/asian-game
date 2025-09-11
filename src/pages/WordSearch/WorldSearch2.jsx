@@ -278,9 +278,8 @@ export default function WordSearch2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayKey, KEYS.user, KEYS.done]);
 
-  /* ---------- LOAD LOCAL PROGRESS ---------- */
+  /* ---------- LOAD LOCAL PROGRESS (eager) ---------- */
   useEffect(() => {
-    if (!serverLockChecked || alreadySubmitted) return;
     try {
       const raw = localStorage.getItem(KEYS.state);
       if (!raw) return;
@@ -292,11 +291,11 @@ export default function WordSearch2() {
       if (typeof saved.score === "number") setScore(saved.score);
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverLockChecked, alreadySubmitted, KEYS.state]);
+  }, [KEYS.state]);
 
   /* ---------- PERSIST PROGRESS ---------- */
   useEffect(() => {
-    if (!serverLockChecked || alreadySubmitted) return;
+    if (alreadySubmitted) return;
     const payload = {
       foundWords: Array.from(foundWords),
       foundCells: Array.from(foundCells),
@@ -308,7 +307,6 @@ export default function WordSearch2() {
     foundCells,
     score,
     alreadySubmitted,
-    serverLockChecked,
     KEYS.state,
   ]);
 
@@ -627,7 +625,7 @@ export default function WordSearch2() {
                   gap={1}
                   sx={{ justifyContent: { xs: "center", sm: "flex-start" } }}
                 >
-                  {["TEXTURES", "BRUSHES", "LONDON", "BIGBEN"].map((w) => (
+                  {WORDS.map((w) => (
                     <Chip
                       key={w}
                       label={w}

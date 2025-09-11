@@ -10,6 +10,7 @@ export default function UploadCard({
   day,
   game,
   groupKey = "default",
+  slot,
   adminKey,
   adminUuid,
   onDone,
@@ -28,9 +29,7 @@ export default function UploadCard({
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const url = `${baseUrl}/api/admin/content/upload?day=${day}&game=${game}${
-        groupKey ? `&group=${groupKey}` : ""
-      }`;
+      const url = `${baseUrl}/api/admin/content/upload?day=${day}&game=${game}${groupKey ? `&group=${groupKey}` : ""}${slot ? `&slot=${slot}` : ""}`;
       const headers = adminUuid
         ? { "x-admin-uuid": adminUuid }
         : { "x-admin-key": adminKey };
@@ -53,6 +52,7 @@ export default function UploadCard({
           <Chip size="small" label={`Day: ${day}`} />
           <Chip size="small" label={`Game: ${game}`} />
           <Chip size="small" label={`Group: ${groupKey}`} />
+          {slot ? <Chip size="small" label={`Slot: ${slot}`} /> : null}
         </Stack>
         <input
           ref={inputRef}
