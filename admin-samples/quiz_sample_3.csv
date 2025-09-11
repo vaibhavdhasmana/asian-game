@@ -1,0 +1,6 @@
+id,question,opt1,opt2,opt3,opt4,correctIndex,explanation
+1,Which is a finish type?,Matte,Metal,Glass,Stone,0,Matte is a paint finish.
+2,How many sides in a square?,2,3,4,5,2,A square has 4 sides.
+3,The UK flag is called?,Union Flag,Union Jack,Stars and Stripes,Tricolor,1,Union Jack is common name.
+4,Mixing red and blue gives?,Green,Purple,Orange,Brown,1,Red + blue = purple.
+5,Buckingham Palace is in?,Edinburgh,Manchester,London,Liverpool,2,It is in London.

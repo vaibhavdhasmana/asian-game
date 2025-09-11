@@ -1,0 +1,7 @@
+word,start_r,start_c,dir_r,dir_c
+PAINT,0,0,1,1
+BRUSH,0,8,1,0
+COLOR,8,0,0,1
+SHADE,6,0,0,1
+ROLLER,2,2,1,0
+TEXTURE,1,1,1,1

@@ -78,6 +78,17 @@ const shuffle = (arr) => {
   }
   return a;
 };
+// Ensure no tile starts in the correct position
+const derange = (n) => {
+  const base = Array.from({ length: n }, (_, i) => i);
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const p = shuffle(base);
+    if (p.every((v, i) => v === i)) continue; // all correct, retry
+    if (!p.some((v, i) => v === i)) return p; // derangement found
+  }
+  // Fallback simple rotation guarantees no fixed point
+  return base.map((_, i) => (i + 1) % n);
+};
 
 const bgPosForTile = (tileId, widthPx, heightPx) => {
   const tileW = widthPx / COLS;
@@ -123,6 +134,7 @@ export default function JigsawMUI() {
     pointsPerTile: null,
     timerSeconds: null,
   });
+  const [contentLoading, setContentLoading] = useState(true);
   useEffect(() => {
     (async () => {
       try {
@@ -137,7 +149,9 @@ export default function JigsawMUI() {
           pointsPerTile: Number(p.pointsPerTile) || null,
           timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
         });
-      } catch {}
+      } catch {} finally {
+        setContentLoading(false);
+      }
     })();
   }, [dayKey, slot]);
 
@@ -250,11 +264,7 @@ export default function JigsawMUI() {
   const totalTiles = ROWS * COLS;
   const solvedOrder = useMemo(() => range(totalTiles), [totalTiles]);
 
-  const [order, setOrder] = useState(() => {
-    const s = shuffle(solvedOrder);
-    if (s.every((v, i) => v === i)) s.reverse();
-    return s;
-  });
+  const [order, setOrder] = useState(() => derange(totalTiles));
   const [credited, setCredited] = useState(() => new Set());
   const [score, setScore] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -275,7 +285,9 @@ export default function JigsawMUI() {
     [order]
   );
 
-  const timePct = Math.max(0, (secondsLeft / TIMER_SECONDS) * 100);
+  const SAFE_TIMER = Number(TIMER_SECONDS) > 0 ? Number(TIMER_SECONDS) : 1;
+  const timePct = Math.max(0, Math.min(100, (secondsLeft / SAFE_TIMER) * 100));
+  const timeColor = secondsLeft <= 10 ? "error" : secondsLeft <= 20 ? "warning" : "primary";
   const progressPct = (credited.size / totalTiles) * 100;
 
   /* ---------- Server lock + resume ---------- */
@@ -480,7 +492,10 @@ export default function JigsawMUI() {
   }, [finished, timeUp, serverLockChecked, alreadySubmitted]);
   const swap = (i, j) => {
     if (finished || timeUp || alreadySubmitted) return;
+    // Freeze any correctly placed tiles
+    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j)) return;
     setOrder((prev) => {
+      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j)) return prev;
       const next = prev.slice();
       [next[i], next[j]] = [next[j], next[i]];
 
@@ -528,11 +543,18 @@ export default function JigsawMUI() {
 
   const handleTileTap = (boardIndex) => {
     if (!serverLockChecked || alreadySubmitted || timeUp || finished) return;
+    // Do not allow selecting a tile already in the correct place
+    if (order[boardIndex] === boardIndex || credited.has(boardIndex)) return;
     if (selectedIndex === null) {
       setSelectedIndex(boardIndex);
     } else if (selectedIndex === boardIndex) {
       setSelectedIndex(null);
     } else {
+      // prevent swapping with a frozen tile
+      if (order[selectedIndex] === selectedIndex || order[boardIndex] === boardIndex) {
+        setSelectedIndex(null);
+        return;
+      }
       swap(selectedIndex, boardIndex);
       setSelectedIndex(null);
     }
@@ -540,8 +562,7 @@ export default function JigsawMUI() {
 
   const reshuffle = () => {
     if (alreadySubmitted || timeUp || finished) return;
-    const shuf = shuffle(solvedOrder);
-    if (shuf.every((v, i) => v === i)) shuf.reverse();
+    const shuf = derange(totalTiles);
     setOrder(shuf);
     setSelectedIndex(null);
     setCredited(new Set());
@@ -562,9 +583,7 @@ export default function JigsawMUI() {
     setCredited(new Set());
     setScore(0);
     setSecondsLeft(TIMER_SECONDS);
-    const shuf = shuffle(solvedOrder);
-    if (shuf.every((v, i) => v === i)) shuf.reverse();
-    setOrder(shuf);
+    setOrder(derange(totalTiles));
     setSnack({ open: true, message: "Local progress reset" });
   };
 
@@ -573,6 +592,13 @@ export default function JigsawMUI() {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Typography>Checking attempt status...</Typography>
+      </Box>
+    );
+  }
+  if (contentLoading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography>Loading puzzle...</Typography>
       </Box>
     );
   }
@@ -740,15 +766,30 @@ export default function JigsawMUI() {
 
               {/* Time bar */}
               <Box sx={{ mt: 2 }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={timePct}
+                <Box
                   sx={{
+                    position: 'relative',
                     height: 8,
                     borderRadius: 999,
-                    bgcolor: "rgba(255,255,255,0.08)",
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
                   }}
-                />
+                >
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: '100%',
+                      transformOrigin: 'right',
+                      transform: `scaleX(${Math.max(0, Math.min(1, timePct / 100))})`,
+                      backgroundColor: (theme) =>
+                        (theme.palette?.[timeColor]?.main || theme.palette.primary.main),
+                      transition: 'transform 0.3s linear',
+                    }}
+                  />
+                </Box>
               </Box>
 
               {/* Placement progress */}
@@ -852,7 +893,7 @@ export default function JigsawMUI() {
                               ? "inset 0 0 0 2px rgba(56,142,60,0.9), 0 4px 10px rgba(0,0,0,0.3)"
                               : "0 4px 10px rgba(0,0,0,0.25)",
                             cursor:
-                              alreadySubmitted || timeUp || finished
+                              alreadySubmitted || timeUp || finished || correct
                                 ? "default"
                                 : "pointer",
                             backgroundImage: `url(${puzzleImg})`,
@@ -866,10 +907,16 @@ export default function JigsawMUI() {
                               "outline 120ms, box-shadow 120ms, transform 120ms",
                             "&:active": {
                               transform:
-                                alreadySubmitted || timeUp || finished
+                                alreadySubmitted || timeUp || finished || correct
                                   ? "none"
                                   : "scale(0.98)",
                             },
+                            // Stronger highlight for correctly placed tiles
+                            filter: correct ? "brightness(1.1)" : "none",
+                            border:
+                              correct
+                                ? "2px solid rgba(56,142,60,0.95)"
+                                : "1px solid rgba(255,255,255,0.12)",
                           }}
                         />
                       );

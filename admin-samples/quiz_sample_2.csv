@@ -1,0 +1,6 @@
+id,question,opt1,opt2,opt3,opt4,correctIndex,explanation
+1,Which city hosts Big Ben?,Paris,London,Rome,Berlin,1,Big Ben is in London.
+2,Primary color example?,Cyan,Magenta,Yellow,All of the above,3,CMY are primary in print.
+3,What tool paints walls?,Brush,Spatula,Hammer,Screwdriver,0,Brush is used for painting.
+4,Finish this brand: Asian __?,Walls,Paints,Colors,Canvas,1,Asian Paints.
+5,The Thames flows through?,Dublin,London,Edinburgh,Cardiff,1,The River Thames flows through London.

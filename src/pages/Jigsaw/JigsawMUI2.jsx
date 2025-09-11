@@ -80,6 +80,16 @@ const shuffle = (arr) => {
   }
   return a;
 };
+// Ensure no tile starts in the correct position
+const derange = (n) => {
+  const base = Array.from({ length: n }, (_, i) => i);
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const p = shuffle(base);
+    if (p.every((v, i) => v === i)) continue;
+    if (!p.some((v, i) => v === i)) return p;
+  }
+  return base.map((_, i) => (i + 1) % n);
+};
 
 // small seeded RNG so edges are stable per day
 function xmur3(str) {
@@ -233,6 +243,7 @@ export default function JigsawMUI2() {
   // Per-day config + server overrides
   const cfg = DAY_CFG[dayKey] || DAY_CFG.day1;
   const [serverCfg, setServerCfg] = useState({ imageUrl: null, pointsPerTile: null, timerSeconds: null });
+  const [contentLoading, setContentLoading] = useState(true);
   useEffect(() => {
     (async () => {
       try {
@@ -247,7 +258,7 @@ export default function JigsawMUI2() {
           pointsPerTile: Number(p.pointsPerTile) || null,
           timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
         });
-      } catch {}
+      } catch {} finally { setContentLoading(false); }
     })();
   }, [dayKey, slot]);
   const puzzleImg = serverCfg.imageUrl || cfg.image;
@@ -310,11 +321,7 @@ export default function JigsawMUI2() {
   const totalTiles = ROWS * COLS;
   const solvedOrder = useMemo(() => range(totalTiles), [totalTiles]);
 
-  const [order, setOrder] = useState(() => {
-    const s = shuffle(solvedOrder);
-    if (s.every((v, i) => v === i)) s.reverse();
-    return s;
-  });
+  const [order, setOrder] = useState(() => derange(totalTiles));
   const [credited, setCredited] = useState(() => new Set());
   const [score, setScore] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -334,7 +341,9 @@ export default function JigsawMUI2() {
     [order]
   );
 
-  const timePct = Math.max(0, (secondsLeft / TIMER_SECONDS) * 100);
+  const SAFE_TIMER = Number(TIMER_SECONDS) > 0 ? Number(TIMER_SECONDS) : 1;
+  const timePct = Math.max(0, Math.min(100, (secondsLeft / SAFE_TIMER) * 100));
+  const timeColor = secondsLeft <= 10 ? 'error' : secondsLeft <= 20 ? 'warning' : 'primary';
   const progressPct = (credited.size / totalTiles) * 100;
 
   // Reset lock flags when day/slot changes so we re-check correctly
@@ -535,7 +544,9 @@ export default function JigsawMUI2() {
   /* ---------- Game logic ---------- */
   const swap = (i, j) => {
     if (finished || timeUp || alreadySubmitted) return;
+    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j)) return;
     setOrder((prev) => {
+      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j)) return prev;
       const next = prev.slice();
       [next[i], next[j]] = [next[j], next[i]];
 
@@ -566,11 +577,16 @@ export default function JigsawMUI2() {
 
   const handleTileTap = (boardIndex) => {
     if (!serverLockChecked || alreadySubmitted || timeUp || finished) return;
+    if (order[boardIndex] === boardIndex || credited.has(boardIndex)) return;
     if (selectedIndex === null) {
       setSelectedIndex(boardIndex);
     } else if (selectedIndex === boardIndex) {
       setSelectedIndex(null);
     } else {
+      if (order[selectedIndex] === selectedIndex || order[boardIndex] === boardIndex) {
+        setSelectedIndex(null);
+        return;
+      }
       swap(selectedIndex, boardIndex);
       setSelectedIndex(null);
     }
@@ -578,8 +594,7 @@ export default function JigsawMUI2() {
 
   const reshuffle = () => {
     if (alreadySubmitted || timeUp || finished) return;
-    const shuf = shuffle(solvedOrder);
-    if (shuf.every((v, i) => v === i)) shuf.reverse();
+    const shuf = derange(totalTiles);
     setOrder(shuf);
     setSelectedIndex(null);
     setCredited(new Set());
@@ -591,6 +606,13 @@ export default function JigsawMUI2() {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <Typography>Checking attempt status...</Typography>
+      </Box>
+    );
+  }
+  if (contentLoading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <Typography>Loading puzzle...</Typography>
       </Box>
     );
   }
@@ -748,11 +770,30 @@ export default function JigsawMUI2() {
 
               {/* Time & placement bars */}
               <Box sx={{ mt: 2 }}>
-                <LinearProgress
-                  variant="determinate"
-                  value={timePct}
-                  sx={{ height: 8, borderRadius: 999 }}
-                />
+                <Box
+                  sx={{
+                    position: 'relative',
+                    height: 8,
+                    borderRadius: 999,
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      right: 0,
+                      width: '100%',
+                      transformOrigin: 'right',
+                      transform: `scaleX(${Math.max(0, Math.min(1, timePct / 100))})`,
+                      backgroundColor: (theme) =>
+                        (theme.palette?.[timeColor]?.main || theme.palette.primary.main),
+                      transition: 'transform 0.3s linear',
+                    }}
+                  />
+                </Box>
               </Box>
               <Box sx={{ mt: 1 }}>
                 <LinearProgress
@@ -847,7 +888,7 @@ export default function JigsawMUI2() {
                             width: `${cellPx}px`,
                             height: `${cellPx}px`,
                             cursor:
-                              alreadySubmitted || timeUp || finished
+                              alreadySubmitted || timeUp || finished || correct
                                 ? "default"
                                 : "pointer",
                           }}
@@ -872,6 +913,9 @@ export default function JigsawMUI2() {
                               clipPath={`url(#clip-${pos})`}
                               preserveAspectRatio="none"
                             />
+                            {correct ? (
+                              <path d={d} fill="rgba(56,142,60,0.18)" />
+                            ) : null}
                             <path
                               d={d}
                               fill="none"
