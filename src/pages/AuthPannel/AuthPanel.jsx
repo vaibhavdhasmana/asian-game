@@ -47,8 +47,16 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
 
     run(async () => {
       if (view === "login") {
+        // Validate Indian mobile for login as well
+        const normalizeMobile = (val) => {
+          const digits = String(val || "").replace(/\D/g, "");
+          const ten = digits.length > 10 ? digits.slice(-10) : digits;
+          return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+        };
+        const mobile = normalizeMobile(uuid);
+        if (!mobile) throw new Error("Enter a valid Indian mobile number (10 digits starting with 6-9).");
         const res = await axios.post(`${baseUrl}/api/asian-paint/login`, {
-          uuid: uuid.trim(),
+          uuid: mobile,
         });
         if (!res.data?.user) throw new Error("Invalid response");
         login(res.data.user);
@@ -56,9 +64,19 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
         resetForm();
         onClose?.();
       } else {
-        const payload = { name: name.trim(), uuid: uuid.trim() };
-        if (!payload.name || !payload.uuid)
-          throw new Error("Name and Mobile are required.");
+        // Registration: validate Indian mobile number in UUID field
+        const normalizeMobile = (val) => {
+          const digits = String(val || "").replace(/\D/g, "");
+          const ten = digits.length > 10 ? digits.slice(-10) : digits;
+          return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+        };
+        const mobile = normalizeMobile(uuid);
+        if (!name.trim()) throw new Error("Name is required.");
+        if (!mobile)
+          throw new Error(
+            "Please enter a valid Indian mobile number (10 digits starting with 6-9)."
+          );
+        const payload = { name: name.trim(), uuid: mobile };
         const res = await axios.post(
           `${baseUrl}/api/asian-paint/register`,
           payload
@@ -75,9 +93,9 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
       const m =
         err.response?.data?.message ||
         (err.response?.status === 409
-          ? "This UID is already registered."
+          ? "This Mobile no. is already registered."
           : err.response?.status === 404
-          ? "UID not found. Please register."
+          ? "User is not found. Please register."
           : err.message || "Something went wrong.");
       setError(m);
     });

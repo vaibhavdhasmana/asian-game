@@ -32,8 +32,18 @@ export default function Login() {
     setError("");
     setSubmitting(true);
     try {
+      // Normalize and validate Indian mobile number
+      const normalizeMobile = (val) => {
+        const digits = String(val || "").replace(/\D/g, "");
+        const ten = digits.length > 10 ? digits.slice(-10) : digits;
+        return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+      };
+      const mobile = normalizeMobile(uuid);
+      if (!mobile) {
+        throw new Error("Enter a valid Indian mobile number (10 digits starting with 6-9).");
+      }
       const res = await axios.post(`${baseUrl}/api/asian-paint/login`, {
-        uuid: uuid.trim(),
+        uuid: mobile,
       });
       if (!res.data?.user) throw new Error("Invalid response");
       login(res.data.user); // persists to localStorage
@@ -42,8 +52,8 @@ export default function Login() {
       const msg =
         err.response?.data?.message ||
         (err.response?.status === 404
-          ? "UID not found. Please register."
-          : "Login failed");
+          ? "User is not found. Please register."
+          : (err?.message || "Login failed"));
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -70,6 +80,8 @@ export default function Login() {
             fullWidth
             required
             sx={{ mb: 3 }}
+            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 13 }}
+            placeholder="10-digit Indian mobile number"
           />
 
           {/* <Box sx={{ mt: 1 }}>

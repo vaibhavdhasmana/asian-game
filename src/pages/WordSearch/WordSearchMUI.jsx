@@ -28,6 +28,7 @@ import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 import { baseUrl } from "../../components/constant/constant";
+import NextRoundNotice from "../../components/NextRoundNotice/NextRoundNotice";
 
 /* ==============================
    CONFIG
@@ -1079,6 +1080,47 @@ export default function WordSearchMUI() {
     );
   }
 
+  // Dedicated locked screen (same style as Quiz) when user already submitted for this slot
+  if (alreadySubmitted && !finished) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+        <Card sx={{ maxWidth: 520 }}>
+          <CardContent>
+            <Stack spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={800} align="center">
+                Locked Until Next Slot
+              </Typography>
+              <Typography color="text.secondary" align="center">
+                You have already submitted for this day and slot. Please wait for the next slot to play again.
+              </Typography>
+              <NextRoundNotice day={dayKey} slot={slot} />
+              <Button variant="contained" onClick={() => navigate("/")}>Home</Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
+  // Finished screen: show next-round notice only (hide grid)
+  if (finished) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+        <Card sx={{ maxWidth: 520 }}>
+          <CardContent>
+            <Stack spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={800} align="center">
+                Word Search Completed!
+              </Typography>
+              <NextRoundNotice day={dayKey} slot={slot} />
+              <Button variant="contained" onClick={() => navigate("/")}>Home</Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
   // Wait for puzzle content (no default grid)
   if (!grid) {
     return (
@@ -1185,6 +1227,12 @@ export default function WordSearchMUI() {
                   </Button>
                 )}
               </Stack>
+
+              {(alreadySubmitted || finished) && (
+                <Box sx={{ mt: 1.5 }}>
+                  <NextRoundNotice day={dayKey} slot={slot} />
+                </Box>
+              )}
 
               <Box sx={{ mt: 2 }}>
                 <LinearProgress

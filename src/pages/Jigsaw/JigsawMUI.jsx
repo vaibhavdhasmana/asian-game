@@ -37,6 +37,7 @@ import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 import { baseUrl } from "../../components/constant/constant";
+import NextRoundNotice from "../../components/NextRoundNotice/NextRoundNotice";
 
 /* -------------------------------------------------------
    REPLACE THESE 3 IMAGES WITH YOUR OWN (one per day)
@@ -603,6 +604,25 @@ export default function JigsawMUI() {
     );
   }
 
+  // Show only the message when the attempt is over/locked
+  if (finished || timeUp || alreadySubmitted) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+        <Card sx={{ maxWidth: 520 }}>
+          <CardContent>
+            <Stack spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={800} align="center">
+                Jigsaw {finished ? 'Completed' : 'Ended'}
+              </Typography>
+              <NextRoundNotice day={dayKey} slot={slot} />
+              <Button variant="contained" onClick={() => navigate('/')}>Home</Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -926,6 +946,9 @@ export default function JigsawMUI() {
 
                 {(finished || timeUp) && (
                   <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+                    <Box sx={{ mb: 1.5, width: '100%' }}>
+                      <NextRoundNotice day={dayKey} slot={slot} />
+                    </Box>
                     <Button
                       variant="contained"
                       startIcon={<DoneAllIcon />}

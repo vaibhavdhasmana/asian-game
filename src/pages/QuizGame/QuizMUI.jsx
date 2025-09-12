@@ -25,6 +25,7 @@ import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useGameSettings from "../../hooks/useGameSettings";
 import { baseUrl } from "../../components/constant/constant";
+import NextRoundNotice from "../../components/NextRoundNotice/NextRoundNotice";
 
 const DEFAULT_TIMER_SECONDS = 30;
 const POINTS_PER_CORRECT = 10; // for UI only; server computes real score
@@ -385,12 +386,12 @@ export default function QuizMUI() {
           <CardContent>
             <Stack spacing={2} alignItems="center">
               <Typography variant="h6" fontWeight={800} align="center">
-                Locked Until Next Slot
+                Locked Until Next Round
               </Typography>
               <Typography color="text.secondary" align="center">
-                You have already submitted for this day and slot. Please wait
-                for the next slot to play again.
+                Please wait for the next round to play again.
               </Typography>
+              <NextRoundNotice day={dayKey} slot={slot} />
               <Button variant="contained" onClick={() => navigate("/")}>
                 Home
               </Button>
@@ -643,6 +644,9 @@ export default function QuizMUI() {
                     </Typography>{" "}
                     out of {totalPoints}
                   </Typography>
+                  <Box sx={{ my: 1.5 }}>
+                    <NextRoundNotice day={dayKey} slot={slot} />
+                  </Box>
                   <Stack
                     direction="row"
                     justifyContent="center"

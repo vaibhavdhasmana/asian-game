@@ -36,6 +36,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
 import { baseUrl } from "../../components/constant/constant";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import NextRoundNotice from "../../components/NextRoundNotice/NextRoundNotice";
 import useGameSettings from "../../hooks/useGameSettings";
 
 /* -------------------------------------------------------
@@ -629,6 +630,23 @@ export default function JigsawMUI2() {
       </Box>
     );
   }
+  if (finished || timeUp || alreadySubmitted) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+        <Card sx={{ maxWidth: 520 }}>
+          <CardContent>
+            <Stack spacing={2} alignItems="center">
+              <Typography variant="h6" fontWeight={800} align="center">
+                Jigsaw {finished ? 'Completed' : 'Ended'}
+              </Typography>
+              <NextRoundNotice day={dayKey} slot={slot} />
+              <Button variant="contained" onClick={() => navigate('/')}>Home</Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
   const dayText = {
     day1: "DAY 1",
     day2: "DAY 2",
@@ -953,8 +971,17 @@ export default function JigsawMUI2() {
                 </Box>
 
                 {(finished || timeUp) && (
-                  <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+                  <Stack
+                    direction="column"
+                    justifyContent="center"
+                    alignItems={"center"}
+                    sx={{ mt: 2 }}
+                  >
+                    <Box sx={{ mb: 1.5, width: "100%" }}>
+                      <NextRoundNotice day={dayKey} slot={slot} />
+                    </Box>
                     <Button
+                      sx={{ width: "150px" }}
                       variant="contained"
                       startIcon={<DoneAllIcon />}
                       onClick={() => navigate("/")}

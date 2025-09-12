@@ -33,9 +33,21 @@ export default function Register({ setShowRegister }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.name && formData.uniqueNo) {
+      const normalizeMobile = (val) => {
+        const digits = String(val || "").replace(/\D/g, "");
+        const ten = digits.length > 10 ? digits.slice(-10) : digits;
+        return /^[6-9]\d{9}$/.test(ten) ? ten : null;
+      };
+      const mobile = normalizeMobile(formData.uniqueNo);
+      if (!mobile) {
+        setErrorMsg(
+          "Please enter a valid Indian mobile number (10 digits starting with 6-9)."
+        );
+        return;
+      }
       const response = await axios.post(`${baseUrl}/api/asian-paint/register`, {
         name: formData.name.trim(),
-        uuid: formData.uniqueNo.trim(),
+        uuid: mobile,
       });
       if (response.status === 201) {
         if (response?.data?.statusCode === 400) {
@@ -148,6 +160,8 @@ export default function Register({ setShowRegister }) {
                   onChange={handleChange}
                   required
                   fullWidth
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 13 }}
+                  placeholder="10-digit Indian mobile number"
                 />
                 {errorMsg && (
                   <Typography variant="body1" color="error">
