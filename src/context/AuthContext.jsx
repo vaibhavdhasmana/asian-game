@@ -53,9 +53,26 @@ export function AuthProvider({ children }) {
     }
   });
 
+  const clearAppLocalState = () => {
+    try {
+      const toDelete = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        // Clear all app/game specific caches and flags for the previous user
+        if (k.startsWith('ap_')) toDelete.push(k);
+      }
+      toDelete.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+  };
+
   const login = (userObj) => {
+    // Clear previous user's local game cache and flags, then set the new user
+    clearAppLocalState();
     setUser(userObj);
     localStorage.setItem(LS_USER, JSON.stringify(userObj));
+    // Let interested widgets refresh (same-tab)
+    try { window.dispatchEvent(new Event('storage')); } catch {}
   };
 
   const logout = () => {

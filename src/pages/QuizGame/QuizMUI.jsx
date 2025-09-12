@@ -15,10 +15,12 @@ import {
   Paper,
   Alert,
   Snackbar,
+  IconButton,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import HomeIcon from '@mui/icons-material/Home';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useGameSettings from '../../hooks/useGameSettings';
@@ -369,6 +371,10 @@ export default function QuizMUI() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+      {/* Home (top-right) */}
+      <IconButton aria-label="Home" onClick={() => navigate('/')} sx={{ position: 'fixed', top: 58, right: 12, zIndex: 10 }}>
+        <HomeIcon />
+      </IconButton>
       <Grid container justifyContent="center" sx={{ mt: 6, px: '12px' }}>
         <Grid item xs={12} md={9} lg={8}>
           <Stack spacing={2} alignItems="stretch">

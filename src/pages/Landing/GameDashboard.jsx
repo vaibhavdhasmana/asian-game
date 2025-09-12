@@ -147,22 +147,30 @@ export default function GameDashboard() {
         gap: "10px",
         width: { xs: "140px", sm: "160px", md: "180px" },
         p: "18px",
-        background: game.bg,
-        borderRadius: "14px",
+        background: (theme) =>
+          `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+        borderRadius: "16px",
         cursor: "pointer",
         userSelect: "none",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        transition: "transform 160ms ease, box-shadow 160ms ease",
+        "&:hover": {
+          transform: "translateY(-4px) scale(1.02)",
+          boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
+        },
       }}
     >
       <Box
         component="img"
         src={game.icon}
         alt={game.title}
-        sx={{ width: { xs: "80%", sm: "90%", md: "85%" } }}
+        sx={{ width: { xs: "80%", sm: "90%", md: "85%" }, filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))" }}
       />
       <Typography
         sx={{ textAlign: "center", whiteSpace: "nowrap" }}
         variant="h6"
-        fontWeight={700}
+        fontWeight={900}
       >
         {game.title}
       </Typography>

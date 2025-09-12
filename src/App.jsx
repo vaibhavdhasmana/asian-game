@@ -1,5 +1,7 @@
 import * as React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import londonTheme from "./theme/londonTheme";
 // import Landing from "./pages/Landing2";
 import NotFound from "./pages/NotFound";
 import Placeholder from "./pages/Placeholder";
@@ -34,7 +36,8 @@ function AdminRoute({ children }) {
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider theme={londonTheme}>
+      <CssBaseline />
       <NavBar />
       {/* <Toolbar /> */}
       <Routes>
@@ -83,6 +86,6 @@ export default function App() {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </ThemeProvider>
   );
 }

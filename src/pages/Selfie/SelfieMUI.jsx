@@ -248,6 +248,9 @@ export default function SelfieMUI() {
       sx={{
         minHeight: "100dvh",
         bgcolor: "background.default",
+        // London-themed subtle glow
+        backgroundImage:
+          "radial-gradient(60rem 60rem at -20% -10%, rgba(225,29,46,0.10), transparent), radial-gradient(40rem 40rem at 120% 110%, rgba(19,81,163,0.12), transparent)",
         py: { xs: 1.5, md: 3 },
       }}
     >
@@ -271,8 +274,15 @@ export default function SelfieMUI() {
               }
             /> */}
 
-      <CardContent sx={{ justifyContent: "center" }}>
-        <Grid container spacing={2} sx={{ justifyContent: "center", mt: 6 }}>
+      <CardContent
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          minHeight: { xs: "calc(100dvh - 100px)", md: "calc(100dvh - 120px)" },
+        }}
+      >
+        <Grid container spacing={2} sx={{ justifyContent: "center" }}>
           <Grid item xs={12}>
             <Paper
               elevation={3}
@@ -286,13 +296,25 @@ export default function SelfieMUI() {
                   sm: 420,
                   md: "min(480px, calc((100dvh - 260px) * 0.5625))", // account for extra top margin
                 },
-                mt: { xs: 1, md: 3 },
+                mt: { xs: 1, md: 2 },
+                mb: "40px", // keep camera 40px from the bottom
                 mx: "auto",
                 overflow: "hidden",
                 borderRadius: 2,
                 bgcolor: "#000",
               }}
             >
+              {/* Subtle animated edge glow for interactivity */}
+              <Box
+                sx={{
+                  pointerEvents: "none",
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 2,
+                  boxShadow:
+                    "inset 0 0 0 2px rgba(255,255,255,0.06), 0 0 0 3px rgba(225,29,46,0.15), 0 0 0 6px rgba(19,81,163,0.10)",
+                }}
+              />
               {/* Camera / Photo */}
               {!captured ? (
                 <video
@@ -340,6 +362,26 @@ export default function SelfieMUI() {
                   }}
                   crossOrigin="anonymous"
                 />
+              )}
+
+              {/* Guidance text */}
+              {!captured && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: "absolute",
+                    left: 12,
+                    bottom: 80,
+                    bgcolor: "rgba(0,0,0,0.35)",
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    fontWeight: 700,
+                    color: "#fff",
+                  }}
+                >
+                  Align your face within the frame
+                </Typography>
               )}
 
               {/* Hidden canvas used for capture/export */}
@@ -398,7 +440,10 @@ export default function SelfieMUI() {
                     height: 56,
                     minWidth: 56,
                     p: 0,
-                    bgcolor: "rgba(0,0,0,0.35)",
+                    bgcolor: "rgba(0,0,0,0.4)",
+                    boxShadow: "0 6px 16px rgba(0,0,0,0.45)",
+                    transition: "transform 80ms ease",
+                    "&:active": { transform: "translateX(-50%) scale(0.96)" },
                   }}
                 >
                   <CameraAltIcon sx={{ fontSize: 28, color: "#fff" }} />

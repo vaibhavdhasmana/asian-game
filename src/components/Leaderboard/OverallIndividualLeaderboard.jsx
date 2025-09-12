@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import useLeaderboard from "../../hooks/useLeaderBoard";
-import Podium from "./Podium";
+import CompactPodium from "./CompactPodium";
 
 const initials = (name = "", uuid = "") => {
   const parts = name.trim().split(" ").filter(Boolean);
@@ -58,7 +58,7 @@ export default function OverallIndividualLeaderboard() {
           ))}
         </Box>
       ) : (
-        <Podium top3={sortedRows.slice(0, 3)} />
+        <CompactPodium top3={sortedRows.slice(0, 3)} />
       )}
 
       <Paper

@@ -19,7 +19,9 @@ import {
   Alert,
   Snackbar,
   LinearProgress,
+  IconButton,
 } from "@mui/material";
+import HomeIcon from "@mui/icons-material/Home";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import axios from "axios";
@@ -858,6 +860,14 @@ export default function WordSearchMUI() {
         mt: "50px",
       }}
     >
+      {/* Home (top-right) */}
+      <IconButton
+        aria-label="Home"
+        onClick={() => navigate("/")}
+        sx={{ position: "fixed", top: 58, right: 12, zIndex: 10 }}
+      >
+        <HomeIcon />
+      </IconButton>
       <Grid
         container
         justifyContent="center"
@@ -914,6 +924,22 @@ export default function WordSearchMUI() {
                       : "In progress"
                   }
                 />
+                {!alreadySubmitted && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => {
+                      // Guard against submitting before puzzle is ready
+                      if (!serverLockChecked || !grid || !WORDS.length) return;
+                      localStorage.setItem(KEYS.done, "true");
+                      localStorage.removeItem(KEYS.state);
+                      setAlreadySubmitted(true);
+                      submitScore(score);
+                    }}
+                  >
+                    Submit
+                  </Button>
+                )}
               </Stack>
 
               <Box sx={{ mt: 2 }}>
@@ -1032,10 +1058,34 @@ export default function WordSearchMUI() {
                               p: 0,
                               m: 0,
                               cursor: "pointer",
-                              fontWeight: 800,
+                              fontWeight: 900,
                               lineHeight: 1,
                               fontSize: { xs: 14, sm: 16 },
                               textTransform: "none",
+                              color: isFound || isPreview ? 'white' : 'inherit',
+                              borderWidth: isFound ? 2 : 1,
+                              borderStyle: isPreview ? 'dashed' : 'solid',
+                              background: (theme) =>
+                                isFound
+                                  ? `linear-gradient(135deg, rgba(56,142,60,0.6), rgba(56,142,60,0.25))`
+                                  : isPreview
+                                  ? `linear-gradient(135deg, ${theme.palette.primary.main}33, ${theme.palette.secondary.main}33)`
+                                  : 'rgba(255,255,255,0.04)',
+                              borderColor: (theme) =>
+                                isFound
+                                  ? theme.palette.success.main
+                                  : isPreview
+                                  ? theme.palette.primary.main
+                                  : 'rgba(255,255,255,0.18)',
+                              boxShadow: isFound
+                                ? 'inset 0 0 0 1px rgba(56,142,60,0.8), 0 4px 12px rgba(0,0,0,0.35)'
+                                : isPreview
+                                ? '0 2px 8px rgba(0,0,0,0.25)'
+                                : '0 1px 4px rgba(0,0,0,0.2)',
+                              transition: 'transform 80ms ease, box-shadow 120ms ease, background 120ms ease',
+                              '&:active': {
+                                transform: 'scale(0.98)'
+                              }
                             }}
                           >
                             {ch}
