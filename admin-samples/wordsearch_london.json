@@ -1,0 +1,12 @@
+{
+  "pointsPerWord": 10,
+  "gridRows": 9,
+  "gridCols": 11,
+  "words": [
+    "TEXTURES",
+    "BRUSHES",
+    "LONDON",
+    "BIGBEN",
+    "BUCKINGHAM"
+  ]
+}

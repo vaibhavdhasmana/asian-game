@@ -1,4 +1,4 @@
-// src/pages/WordSearch/WordSearchMUI.jsx
+﻿// src/pages/WordSearch/WordSearchMUI.jsx
 import React, {
   useEffect,
   useLayoutEffect,
@@ -33,7 +33,8 @@ import { baseUrl } from "../../components/constant/constant";
    CONFIG
    ============================== */
 const POINTS_PER_WORD = 10;
-const GRID_SIZE = 9; // 9x9 grid
+const DEFAULT_ROWS = 9; // content can override via payload.gridRows/gridCols/gridSize
+const DEFAULT_COLS = 9;
 const GRID_GAP = 4;
 
 // Mobile sizing (hard min 360px)
@@ -73,15 +74,21 @@ function hashString(str) {
    ============================== */
 
 // Generate mixed-direction placements for a list of words deterministically
-function generatePlacements(words, seedString = "seed") {
+function generatePlacements(
+  words,
+  seedString = "seed",
+  rows = DEFAULT_ROWS,
+  cols = DEFAULT_COLS
+) {
+  // Only forward-reading directions (no reverse): right, down, down-right, up-right
   const dirs = [
-    [0, 1], // →
-    [1, 0], // ↓
-    [1, 1], // ↘
-    [-1, 1], // ↗
+    [0, 1], // →  (left to right)
+    [1, 0], // ↓  (top to bottom)
+    [1, 1], // ↘  (down-right)
+    [-1, 1], // ↗  (up-right)
   ];
-  const grid = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => "")
+  const grid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => "")
   );
   const rng = mulberry32(hashString(String(seedString)));
 
@@ -91,7 +98,7 @@ function generatePlacements(words, seedString = "seed") {
     for (let i = 0; i < word.length; i++) {
       const r = sr + dr * i;
       const c = sc + dc * i;
-      if (r < 0 || c < 0 || r >= GRID_SIZE || c >= GRID_SIZE) return false;
+      if (r < 0 || c < 0 || r >= rows || c >= cols) return false;
       const existing = grid[r][c];
       if (existing && existing !== word[i]) return false;
     }
@@ -109,25 +116,37 @@ function generatePlacements(words, seedString = "seed") {
 
   function boundsFor(wordLen, dr, dc) {
     let rMin = 0,
-      rMax = GRID_SIZE - 1,
+      rMax = rows - 1,
       cMin = 0,
-      cMax = GRID_SIZE - 1;
-    if (dr > 0) rMax = GRID_SIZE - wordLen;
+      cMax = cols - 1;
+    if (dr > 0) rMax = rows - wordLen;
     if (dr < 0) rMin = wordLen - 1;
-    if (dc > 0) cMax = GRID_SIZE - wordLen;
+    if (dc > 0) cMax = cols - wordLen;
     if (dc < 0) cMin = wordLen - 1;
     if (rMin > rMax || cMin > cMax) return null;
     return { rMin, rMax, cMin, cMax };
   }
 
-  words.forEach((w, idx) => {
-    const word = String(w).toUpperCase();
-    if (!word || word.length < 2 || word.length > GRID_SIZE) return;
+  // Place longer words first to reduce dead-ends
+  const wordList = words
+    .slice()
+    .map((w) => String(w).toUpperCase())
+    .sort((a, b) => b.length - a.length);
+
+  wordList.forEach((word, idx) => {
+    if (!word || word.length < 2 || word.length > Math.max(rows, cols)) return;
+
+    // Shuffle direction order deterministically for variety
+    const dirOrder = dirs.slice();
+    for (let i = dirOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [dirOrder[i], dirOrder[j]] = [dirOrder[j], dirOrder[i]];
+    }
 
     // Try some random directions/starts deterministically
     let placed = false;
     for (let attempt = 0; attempt < 200 && !placed; attempt++) {
-      const dir = dirs[Math.floor(rng() * dirs.length)];
+      const dir = dirOrder[Math.floor(rng() * dirOrder.length)];
       const [dr, dc] = dir;
       const b = boundsFor(word.length, dr, dc);
       if (!b) continue;
@@ -139,10 +158,33 @@ function generatePlacements(words, seedString = "seed") {
       }
     }
 
-    // Deterministic sweep fallback if random tries fail
+    // Deterministic sweep fallback if random tries fail (randomized start)
     if (!placed) {
-      for (let d = 0; d < dirs.length && !placed; d++) {
-        const [dr, dc] = dirs[(idx + d) % dirs.length];
+      for (let d = 0; d < dirOrder.length && !placed; d++) {
+        const [dr, dc] = dirOrder[d];
+        const b = boundsFor(word.length, dr, dc);
+        if (!b) continue;
+        const rLen = b.rMax - b.rMin + 1;
+        const cLen = b.cMax - b.cMin + 1;
+        const rStart = b.rMin + Math.floor(rng() * rLen);
+        const cStart = b.cMin + Math.floor(rng() * cLen);
+        for (let rk = 0; rk < rLen && !placed; rk++) {
+          const sr = b.rMin + ((rStart - b.rMin + rk) % rLen);
+          for (let ck = 0; ck < cLen && !placed; ck++) {
+            const sc = b.cMin + ((cStart - b.cMin + ck) % cLen);
+            if (canPlace(word, sr, sc, dr, dc)) {
+              place(word, sr, sc, dr, dc);
+              placed = true;
+            }
+          }
+        }
+      }
+    }
+
+    // Second pass with reversed direction order (extra robustness)
+    if (!placed) {
+      for (let d = dirOrder.length - 1; d >= 0 && !placed; d--) {
+        const [dr, dc] = dirOrder[d];
         const b = boundsFor(word.length, dr, dc);
         if (!b) continue;
         for (let sr = b.rMin; sr <= b.rMax && !placed; sr++) {
@@ -156,25 +198,25 @@ function generatePlacements(words, seedString = "seed") {
       }
     }
 
-    // Final safety: place horizontally if still not placed
+    // If still not placed after exhaustive sweep, give up for this seed
     if (!placed) {
-      const dr = 0,
-        dc = 1;
-      const b = boundsFor(word.length, dr, dc);
-      const sr = Math.min(GRID_SIZE - 1, idx);
-      const sc = b ? b.cMin : 0;
-      const ok = b && canPlace(word, sr, sc, dr, dc);
-      place(word, ok ? sr : 0, ok ? sc : 0, dr, dc);
+      throw new Error(`Cannot place word: ${word} in ${rows}x${cols}`);
     }
   });
 
   return placements;
 }
 
-function buildGrid(seedString = "default", placementsList) {
-  if (!Array.isArray(placementsList) || placementsList.length === 0) return null;
-  const grid = Array.from({ length: GRID_SIZE }, () =>
-    Array.from({ length: GRID_SIZE }, () => "")
+function buildGrid(
+  seedString = "default",
+  placementsList,
+  rows = DEFAULT_ROWS,
+  cols = DEFAULT_COLS
+) {
+  if (!Array.isArray(placementsList) || placementsList.length === 0)
+    return null;
+  const grid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => "")
   );
 
   placementsList.forEach(({ word, start, dir }) => {
@@ -183,7 +225,7 @@ function buildGrid(seedString = "default", placementsList) {
     for (let i = 0; i < word.length; i++) {
       const r = sr + dr * i;
       const c = sc + dc * i;
-      if (r < 0 || c < 0 || r >= GRID_SIZE || c >= GRID_SIZE) {
+      if (r < 0 || c < 0 || r >= rows || c >= cols) {
         throw new Error(`Word ${word} goes out of bounds`);
       }
       const existing = grid[r][c];
@@ -197,8 +239,8 @@ function buildGrid(seedString = "default", placementsList) {
   // Fill with deterministic A-Z
   const rng = mulberry32(hashString(seedString));
   const A = "A".charCodeAt(0);
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       if (!grid[r][c]) {
         const ch = String.fromCharCode(A + Math.floor(rng() * 26));
         grid[r][c] = ch;
@@ -253,6 +295,8 @@ export default function WordSearchMUI() {
   // Server-driven overrides (optional)
   const [contentVersion, setContentVersion] = useState(0);
   const [pointsPerWord, setPointsPerWord] = useState(POINTS_PER_WORD);
+  const [gridRows, setGridRows] = useState(DEFAULT_ROWS);
+  const [gridCols, setGridCols] = useState(DEFAULT_COLS);
   const [serverWords, setServerWords] = useState(null);
   const [serverPlacements, setServerPlacements] = useState(null);
   const WORDS = useMemo(() => serverWords || [], [serverWords]);
@@ -261,21 +305,99 @@ export default function WordSearchMUI() {
     if (serverPlacements && serverPlacements.length) return serverPlacements;
     if (serverWords && serverWords.length) {
       const upper = serverWords.map((w) => String(w).toUpperCase());
-      const seed = `${dayKey}|${slot}|${contentVersion || 0}|${upper.join(",")}`;
-      return generatePlacements(upper, seed);
+      const seed = `${dayKey}|${slot}|${
+        contentVersion || 0
+      }|${gridRows}x${gridCols}|${upper.join(",")}`;
+      // First pass
+      let p = generatePlacements(upper, seed, gridRows, gridCols);
+      // Sanity: verify the generated placements don't self-conflict when applied
+      try {
+        buildGrid(seed, p, gridRows, gridCols);
+        return p;
+      } catch (e) {
+        console.warn("[WS] placements self-conflict, regenerating", e);
+        const altSeed = `${seed}-alt`;
+        const alt = generatePlacements(upper, altSeed, gridRows, gridCols);
+        try {
+          buildGrid(altSeed, alt, gridRows, gridCols);
+          return alt;
+        } catch (e2) {
+          console.error("[WS] alt placements also conflicted", e2);
+          return p; // return first; fallback builder will try again
+        }
+      }
     }
     return null; // no defaults; wait for server
-  }, [serverPlacements, serverWords, dayKey, slot, contentVersion]);
+  }, [
+    serverPlacements,
+    serverWords,
+    dayKey,
+    slot,
+    contentVersion,
+    gridRows,
+    gridCols,
+  ]);
 
   useEffect(() => {
     (async () => {
       try {
+        console.log("[WS] fetching content", {
+          day: dayKey,
+          slot,
+          uuid: (JSON.parse(localStorage.getItem(KEYS.user) || "null") || {})
+            .uuid,
+        });
         const user = JSON.parse(localStorage.getItem(KEYS.user) || "null");
         const uuid = user?.uuid || user?.uniqueNo;
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
           params: { day: dayKey, game: "wordSearch", uuid, slot },
         });
+        console.log("[WS] content response", {
+          version: data?.version,
+          hasPayload: !!data?.payload,
+          payload: data?.payload,
+        });
         setContentVersion(data?.version || 0);
+        const rowsFromPayload = Number(
+          data?.payload?.gridRows || data?.payload?.grid_rows
+        );
+        const colsFromPayload = Number(
+          data?.payload?.gridCols || data?.payload?.grid_cols
+        );
+        const sizeFromPayload = Number(
+          data?.payload?.gridSize || data?.payload?.grid_size
+        );
+        let rows =
+          Number.isFinite(rowsFromPayload) && rowsFromPayload > 0
+            ? rowsFromPayload
+            : DEFAULT_ROWS;
+        let cols =
+          Number.isFinite(colsFromPayload) && colsFromPayload > 0
+            ? colsFromPayload
+            : DEFAULT_COLS;
+        if (
+          !Number.isFinite(rowsFromPayload) &&
+          !Number.isFinite(colsFromPayload) &&
+          Number.isFinite(sizeFromPayload) &&
+          sizeFromPayload > 0
+        ) {
+          rows = sizeFromPayload;
+          cols = sizeFromPayload;
+        }
+        // Infer columns from longest word if only words given
+        if (
+          (!Number.isFinite(colsFromPayload) || colsFromPayload <= 0) &&
+          Array.isArray(data?.payload?.words) &&
+          data.payload.words.length
+        ) {
+          const longest = Math.max(
+            ...data.payload.words.map((w) => String(w).length)
+          );
+          cols = Math.max(cols, longest);
+        }
+        setGridRows(rows);
+        setGridCols(cols);
+        console.log("[WS] grid dimensions resolved", { rows, cols });
         const ppw = Number(
           data?.payload?.pointsPerWord ?? data?.payload?.points_per_word
         );
@@ -284,8 +406,12 @@ export default function WordSearchMUI() {
           setServerWords(
             data.payload.words.map((w) => String(w).toUpperCase())
           );
+          console.log("[WS] words loaded", data.payload.words);
         }
-        if (Array.isArray(data?.payload?.placements) && data.payload.placements.length) {
+        if (
+          Array.isArray(data?.payload?.placements) &&
+          data.payload.placements.length
+        ) {
           setServerPlacements(
             data.payload.placements.map((p) => ({
               word: String(p.word).toUpperCase(),
@@ -293,11 +419,25 @@ export default function WordSearchMUI() {
               dir: p.dir,
             }))
           );
+          console.log(
+            "[WS] placements provided",
+            data.payload.placements.length
+          );
         }
       } catch {}
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayKey, slot]);
+
+  // Debug: track when placements are computed/changed
+  useEffect(() => {
+    console.log("[WS] placementsList update", {
+      hasPlacements: !!placementsList,
+      count: placementsList?.length || 0,
+      hasWords,
+      words: WORDS,
+    });
+  }, [placementsList, hasWords, WORDS]);
 
   // When day/slot changes, clear previous content snapshot so we don't reuse old content
   useEffect(() => {
@@ -315,10 +455,10 @@ export default function WordSearchMUI() {
 
   const computeFromWidth = (availWidth) => {
     const avail = Math.max(MIN_REF_WIDTH, Math.min(availWidth, MAX_REF_WIDTH));
-    const totalGaps = GRID_GAP * (GRID_SIZE - 1);
-    const rawCell = Math.floor((avail - totalGaps) / GRID_SIZE);
+    const totalGaps = GRID_GAP * (gridCols - 1);
+    const rawCell = Math.floor((avail - totalGaps) / gridCols);
     const nextCell = Math.max(CELL_MIN, Math.min(CELL_MAX, rawCell));
-    const nextGridW = nextCell * GRID_SIZE + totalGaps;
+    const nextGridW = nextCell * gridCols + totalGaps;
     setCellPx(nextCell);
     setGridWidth(nextGridW);
   };
@@ -340,6 +480,14 @@ export default function WordSearchMUI() {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    const node = wrapRef.current;
+    if (!node) return;
+    const w0 = node.getBoundingClientRect().width;
+    if (w0 > 0) computeFromWidth(w0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridCols]);
+
   /* ---------- Server lock (hard block even if LS cleared) ---------- */
   const [serverLockChecked, setServerLockChecked] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -358,29 +506,55 @@ export default function WordSearchMUI() {
         const parsed = JSON.parse(fromLS);
         if (
           Array.isArray(parsed) &&
-          parsed.length === GRID_SIZE &&
-          parsed[0].length === GRID_SIZE
+          parsed.length === gridRows &&
+          parsed[0].length === gridCols
         ) {
+          console.log("[WS] using saved grid from LS", {
+            rows: parsed.length,
+            cols: parsed[0]?.length,
+          });
           return parsed;
         }
       }
     } catch {}
     // No saved grid; if we don't have placements yet, don't create a default grid.
-    const g = buildGrid(`ws-${dayKey}-9x9`, placementsList);
+    const g = buildGrid(
+      `ws-${dayKey}-grid${gridRows}x${gridCols}`,
+      placementsList,
+      gridRows,
+      gridCols
+    );
     if (g) {
       localStorage.setItem(KEYS.grid, JSON.stringify(g));
       try {
-        const currentWords = JSON.stringify(
-          (placementsList || []).map((p) => p.word)
-        );
+        const currentWords = JSON.stringify({
+          rows: gridRows,
+          cols: gridCols,
+          words: (placementsList || []).map((p) => p.word),
+        });
         localStorage.setItem(KEYS.words, currentWords);
       } catch {}
+      console.log("[WS] built fresh grid", {
+        rows: g.length,
+        cols: g[0]?.length,
+      });
       return g;
     }
+    console.log("[WS] no grid yet (waiting for placements)");
     return null;
   });
 
-  // On day/slot change, swap in saved grid for that scope if available; else wait
+  // Debug: log grid readiness changes
+  useEffect(() => {
+    if (grid)
+      console.log("[WS] grid ready", {
+        rows: grid.length,
+        cols: grid[0]?.length,
+      });
+    else console.log("[WS] grid is null (loading)");
+  }, [grid]);
+
+  // On day/slot/grid size change, swap in saved grid for that scope if available; else wait
   useEffect(() => {
     try {
       const fromLS = localStorage.getItem(KEYS.grid);
@@ -388,8 +562,8 @@ export default function WordSearchMUI() {
         const parsed = JSON.parse(fromLS);
         if (
           Array.isArray(parsed) &&
-          parsed.length === GRID_SIZE &&
-          parsed[0].length === GRID_SIZE
+          parsed.length === gridRows &&
+          parsed[0].length === gridCols
         ) {
           setGrid(parsed);
           return;
@@ -398,12 +572,10 @@ export default function WordSearchMUI() {
     } catch {}
     setGrid(null); // trigger loading state until placements/content arrive and grid is built
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayKey, slot]);
+  }, [dayKey, slot, gridRows, gridCols]);
   const [foundWords, setFoundWords] = useState(() => {
     try {
-      const raw = localStorage.getItem(
-        `ap_ws_state_${dayKey}_s${slot}_v4`
-      );
+      const raw = localStorage.getItem(`ap_ws_state_${dayKey}_s${slot}_v4`);
       if (raw) {
         const saved = JSON.parse(raw);
         if (Array.isArray(saved.foundWords)) return new Set(saved.foundWords);
@@ -413,9 +585,7 @@ export default function WordSearchMUI() {
   });
   const [foundCells, setFoundCells] = useState(() => {
     try {
-      const raw = localStorage.getItem(
-        `ap_ws_state_${dayKey}_s${slot}_v4`
-      );
+      const raw = localStorage.getItem(`ap_ws_state_${dayKey}_s${slot}_v4`);
       if (raw) {
         const saved = JSON.parse(raw);
         if (Array.isArray(saved.foundCells)) return new Set(saved.foundCells);
@@ -425,9 +595,7 @@ export default function WordSearchMUI() {
   });
   const [score, setScore] = useState(() => {
     try {
-      const raw = localStorage.getItem(
-        `ap_ws_state_${dayKey}_s${slot}_v4`
-      );
+      const raw = localStorage.getItem(`ap_ws_state_${dayKey}_s${slot}_v4`);
       if (raw) {
         const saved = JSON.parse(raw);
         if (typeof saved.score === "number") return saved.score;
@@ -440,26 +608,49 @@ export default function WordSearchMUI() {
   // Preserve in-progress games if content version and words haven't changed.
   useEffect(() => {
     try {
+      console.log("[WS] rebuild effect", {
+        hasGrid: !!localStorage.getItem(KEYS.grid),
+        hasState: !!localStorage.getItem(KEYS.state),
+        contentVersion,
+        rows: gridRows,
+        cols: gridCols,
+        placements: placementsList?.length || 0,
+      });
       const hasGrid = !!localStorage.getItem(KEYS.grid);
       const hasState = !!localStorage.getItem(KEYS.state);
       const oldVer = Number(localStorage.getItem(KEYS.version) || "0");
       const newVer = Number(contentVersion) || 0;
-      const currentWords = JSON.stringify(
-        (placementsList || []).map((p) => p.word)
-      );
+      const currentWords = JSON.stringify({
+        rows: gridRows,
+        cols: gridCols,
+        words: (placementsList || []).map((p) => p.word),
+      });
       const storedWords = localStorage.getItem(KEYS.words) || "";
       const wordsMatch = storedWords === currentWords;
 
       // If server content hasn't arrived yet, do nothing.
       const awaitingServer = !serverPlacements && !serverWords;
-      if (awaitingServer) return;
+      if (awaitingServer) {
+        console.log("[WS] awaiting server content...");
+        return;
+      }
 
       // If we already have a grid and both version and words match, keep everything.
-      if (hasGrid && oldVer === newVer && wordsMatch) return;
+      if (hasGrid && oldVer === newVer && wordsMatch) {
+        console.log("[WS] keeping existing grid (version/words match)");
+        return;
+      }
 
       // If we have existing progress but no stored version yet, and the words match
       // the server payload, just adopt the new version without clearing.
-      if (hasGrid && (hasState || storedWords) && oldVer === 0 && newVer > 0 && wordsMatch) {
+      if (
+        hasGrid &&
+        (hasState || storedWords) &&
+        oldVer === 0 &&
+        newVer > 0 &&
+        wordsMatch
+      ) {
+        console.log("[WS] adopting version without clearing", { newVer });
         localStorage.setItem(KEYS.version, String(newVer));
         return;
       }
@@ -467,14 +658,20 @@ export default function WordSearchMUI() {
       // adopt the new version even if wordsMatch is indeterminate. Prefer preserving
       // the player's progress on the first versioned rollout.
       if (hasGrid && hasState && oldVer === 0 && newVer > 0) {
+        console.log("[WS] adopting version with state (no clear)", { newVer });
         localStorage.setItem(KEYS.version, String(newVer));
         return;
       }
 
-      // If content version differs OR words changed, rebuild and clear local progress for this day/slot.
+      // If content version differs OR words/size changed, rebuild and clear local progress for this day/slot.
       if (newVer !== oldVer || !wordsMatch) {
         const verSeed = newVer > 0 ? newVer : 0;
-        const g = buildGrid(`ws-${dayKey}-9x9-v${verSeed}`, placementsList);
+        const g = buildGrid(
+          `ws-${dayKey}-grid${gridRows}x${gridCols}-v${verSeed}`,
+          placementsList,
+          gridRows,
+          gridCols
+        );
         if (!g) return;
         setGrid(g);
         setFoundWords(new Set());
@@ -485,13 +682,23 @@ export default function WordSearchMUI() {
         if (verSeed > 0) localStorage.setItem(KEYS.version, String(verSeed));
         localStorage.removeItem(KEYS.state);
         localStorage.removeItem(KEYS.done);
+        console.log("[WS] rebuilt grid due to change", {
+          verSeed,
+          rows: gridRows,
+          cols: gridCols,
+        });
         return;
       }
 
       // If no grid exists yet (fresh), build one using whatever placements we have.
       if (!hasGrid) {
         const seedVer = newVer > 0 ? newVer : 0;
-        const g = buildGrid(`ws-${dayKey}-9x9-v${seedVer}`, placementsList);
+        const g = buildGrid(
+          `ws-${dayKey}-grid${gridRows}x${gridCols}-v${seedVer}`,
+          placementsList,
+          gridRows,
+          gridCols
+        );
         if (!g) return;
         setGrid(g);
         setFoundWords(new Set());
@@ -500,10 +707,45 @@ export default function WordSearchMUI() {
         localStorage.setItem(KEYS.grid, JSON.stringify(g));
         localStorage.setItem(KEYS.words, currentWords);
         if (seedVer > 0) localStorage.setItem(KEYS.version, String(seedVer));
+        console.log("[WS] built initial grid", {
+          seedVer,
+          rows: gridRows,
+          cols: gridCols,
+        });
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayKey, slot, contentVersion, placementsList]);
+  }, [dayKey, slot, contentVersion, placementsList, gridRows, gridCols]);
+
+  // Fallback: if placements are ready but grid is still null, build once
+  useEffect(() => {
+    if (grid || !placementsList || !placementsList.length) return;
+    try {
+      const g = buildGrid(
+        `ws-${dayKey}-grid${gridRows}x${gridCols}-fallback`,
+        placementsList,
+        gridRows,
+        gridCols
+      );
+      if (g) {
+        setGrid(g);
+        localStorage.setItem(KEYS.grid, JSON.stringify(g));
+        const currentWords = JSON.stringify({
+          rows: gridRows,
+          cols: gridCols,
+          words: placementsList.map((p) => p.word),
+        });
+        localStorage.setItem(KEYS.words, currentWords);
+        console.log("[WS] fallback built grid", {
+          rows: g.length,
+          cols: g[0]?.length,
+        });
+      }
+    } catch (e) {
+      console.error("[WS] fallback build failed", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placementsList, gridRows, gridCols]);
 
   // selection + live preview
   const [isDragging, setIsDragging] = useState(false);
@@ -620,14 +862,7 @@ export default function WordSearchMUI() {
       score,
     };
     localStorage.setItem(KEYS.state, JSON.stringify(payload));
-  }, [
-    foundWords,
-    foundCells,
-    score,
-    alreadySubmitted,
-    hydrated,
-    KEYS.state,
-  ]);
+  }, [foundWords, foundCells, score, alreadySubmitted, hydrated, KEYS.state]);
 
   /* ---------- Native touchmove (passive:false to allow preventDefault) ---------- */
   useEffect(() => {
@@ -783,7 +1018,11 @@ export default function WordSearchMUI() {
         game: "wordSearch",
         slot,
         contentVersion: contentVersion || 0,
-        payload: { found: foundWords.size, wordsMax: WORDS.length, pointsPerWord },
+        payload: {
+          found: foundWords.size,
+          wordsMax: WORDS.length,
+          pointsPerWord,
+        },
       });
       setSnack({ open: true, message: "Score submitted!" });
       localStorage.setItem(KEYS.done, "true");
@@ -850,7 +1089,12 @@ export default function WordSearchMUI() {
   }
 
   const progressPct = hasWords ? (foundWords.size / WORDS.length) * 100 : 0;
-
+  const dayText = {
+    day1: "DAY 1",
+    day2: "DAY 2",
+    day3: "DAY 3",
+    day4: "DAY 4",
+  };
   return (
     <Box
       sx={{
@@ -883,7 +1127,7 @@ export default function WordSearchMUI() {
               align="center"
               color="primary"
             >
-              {dayKey.toUpperCase()} - Word Search
+              {dayText[dayKey].toUpperCase()} - Word Search
             </Typography>
 
             <Paper elevation={3} sx={{ p: { xs: 1.5, md: 2 } }}>
@@ -995,7 +1239,7 @@ export default function WordSearchMUI() {
                     sx={{
                       width: `${gridWidth}px`,
                       display: "grid",
-                      gridTemplateColumns: `repeat(${GRID_SIZE}, ${cellPx}px)`,
+                      gridTemplateColumns: `repeat(${gridCols}, ${cellPx}px)`,
                       gap: `${GRID_GAP}px`,
                       justifyContent: "center",
                       userSelect: "none",
@@ -1062,30 +1306,31 @@ export default function WordSearchMUI() {
                               lineHeight: 1,
                               fontSize: { xs: 14, sm: 16 },
                               textTransform: "none",
-                              color: isFound || isPreview ? 'white' : 'inherit',
+                              color: isFound || isPreview ? "white" : "inherit",
                               borderWidth: isFound ? 2 : 1,
-                              borderStyle: isPreview ? 'dashed' : 'solid',
+                              borderStyle: isPreview ? "dashed" : "solid",
                               background: (theme) =>
                                 isFound
                                   ? `linear-gradient(135deg, rgba(56,142,60,0.6), rgba(56,142,60,0.25))`
                                   : isPreview
                                   ? `linear-gradient(135deg, ${theme.palette.primary.main}33, ${theme.palette.secondary.main}33)`
-                                  : 'rgba(255,255,255,0.04)',
+                                  : "rgba(255,255,255,0.04)",
                               borderColor: (theme) =>
                                 isFound
                                   ? theme.palette.success.main
                                   : isPreview
                                   ? theme.palette.primary.main
-                                  : 'rgba(255,255,255,0.18)',
+                                  : "rgba(255,255,255,0.18)",
                               boxShadow: isFound
-                                ? 'inset 0 0 0 1px rgba(56,142,60,0.8), 0 4px 12px rgba(0,0,0,0.35)'
+                                ? "inset 0 0 0 1px rgba(56,142,60,0.8), 0 4px 12px rgba(0,0,0,0.35)"
                                 : isPreview
-                                ? '0 2px 8px rgba(0,0,0,0.25)'
-                                : '0 1px 4px rgba(0,0,0,0.2)',
-                              transition: 'transform 80ms ease, box-shadow 120ms ease, background 120ms ease',
-                              '&:active': {
-                                transform: 'scale(0.98)'
-                              }
+                                ? "0 2px 8px rgba(0,0,0,0.25)"
+                                : "0 1px 4px rgba(0,0,0,0.2)",
+                              transition:
+                                "transform 80ms ease, box-shadow 120ms ease, background 120ms ease",
+                              "&:active": {
+                                transform: "scale(0.98)",
+                              },
                             }}
                           >
                             {ch}
@@ -1121,8 +1366,3 @@ export default function WordSearchMUI() {
     </Box>
   );
 }
-
-
-
-
-

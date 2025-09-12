@@ -62,7 +62,7 @@ export default function Login() {
 
         <Box component="form" onSubmit={onSubmit} sx={{ mt: 2 }}>
           <TextField
-            label="UID No :"
+            label="Mobile No :"
             name="uuid"
             value={uuid}
             onChange={(e) => setUuid(e.target.value)}

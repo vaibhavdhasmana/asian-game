@@ -231,7 +231,7 @@ export default function JigsawMUI2() {
     gs.settings?.day ||
     "day1";
   const dayKey = useMemo(() => {
-    const v = (queryDay || String(rawDay).toLowerCase());
+    const v = queryDay || String(rawDay).toLowerCase();
     return ["day1", "day2", "day3"].includes(v) ? v : "day1";
   }, [queryDay, rawDay]);
   const slot = useMemo(() => {
@@ -242,7 +242,11 @@ export default function JigsawMUI2() {
 
   // Per-day config + server overrides
   const cfg = DAY_CFG[dayKey] || DAY_CFG.day1;
-  const [serverCfg, setServerCfg] = useState({ imageUrl: null, pointsPerTile: null, timerSeconds: null });
+  const [serverCfg, setServerCfg] = useState({
+    imageUrl: null,
+    pointsPerTile: null,
+    timerSeconds: null,
+  });
   const [contentLoading, setContentLoading] = useState(true);
   useEffect(() => {
     (async () => {
@@ -250,7 +254,7 @@ export default function JigsawMUI2() {
         const user = JSON.parse(localStorage.getItem("ap_user") || "null");
         const uuid = user?.uuid || user?.uniqueNo;
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
-          params: { day: dayKey, game: 'jigsaw', uuid, slot },
+          params: { day: dayKey, game: "jigsaw", uuid, slot },
         });
         const p = data?.payload || {};
         setServerCfg({
@@ -258,7 +262,10 @@ export default function JigsawMUI2() {
           pointsPerTile: Number(p.pointsPerTile) || null,
           timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
         });
-      } catch {} finally { setContentLoading(false); }
+      } catch {
+      } finally {
+        setContentLoading(false);
+      }
     })();
   }, [dayKey, slot]);
   const puzzleImg = serverCfg.imageUrl || cfg.image;
@@ -343,7 +350,8 @@ export default function JigsawMUI2() {
 
   const SAFE_TIMER = Number(TIMER_SECONDS) > 0 ? Number(TIMER_SECONDS) : 1;
   const timePct = Math.max(0, Math.min(100, (secondsLeft / SAFE_TIMER) * 100));
-  const timeColor = secondsLeft <= 10 ? 'error' : secondsLeft <= 20 ? 'warning' : 'primary';
+  const timeColor =
+    secondsLeft <= 10 ? "error" : secondsLeft <= 20 ? "warning" : "primary";
   const progressPct = (credited.size / totalTiles) * 100;
 
   // Reset lock flags when day/slot changes so we re-check correctly
@@ -544,9 +552,11 @@ export default function JigsawMUI2() {
   /* ---------- Game logic ---------- */
   const swap = (i, j) => {
     if (finished || timeUp || alreadySubmitted) return;
-    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j)) return;
+    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j))
+      return;
     setOrder((prev) => {
-      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j)) return prev;
+      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j))
+        return prev;
       const next = prev.slice();
       [next[i], next[j]] = [next[j], next[i]];
 
@@ -583,7 +593,10 @@ export default function JigsawMUI2() {
     } else if (selectedIndex === boardIndex) {
       setSelectedIndex(null);
     } else {
-      if (order[selectedIndex] === selectedIndex || order[boardIndex] === boardIndex) {
+      if (
+        order[selectedIndex] === selectedIndex ||
+        order[boardIndex] === boardIndex
+      ) {
         setSelectedIndex(null);
         return;
       }
@@ -616,7 +629,12 @@ export default function JigsawMUI2() {
       </Box>
     );
   }
-
+  const dayText = {
+    day1: "DAY 1",
+    day2: "DAY 2",
+    day3: "DAY 3",
+    day4: "DAY 4",
+  };
   return (
     <Box
       sx={{
@@ -656,7 +674,7 @@ export default function JigsawMUI2() {
               align="center"
               color="primary.light"
             >
-              {dayKey.toUpperCase()} – Jigsaw Puzzle
+              {dayText[dayKey].toUpperCase()} – Jigsaw Puzzle
             </Typography>
             <Typography
               sx={{
@@ -666,7 +684,7 @@ export default function JigsawMUI2() {
               align="center"
               color="primary.light"
             >
-              {`${dayKey.toUpperCase()} - Jigsaw Puzzle`}
+              {`${dayText[dayKey].toUpperCase()} - Jigsaw Puzzle`}
             </Typography>
             <Paper
               elevation={0}
@@ -772,25 +790,29 @@ export default function JigsawMUI2() {
               <Box sx={{ mt: 2 }}>
                 <Box
                   sx={{
-                    position: 'relative',
+                    position: "relative",
                     height: 8,
                     borderRadius: 999,
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    overflow: 'hidden',
+                    bgcolor: "rgba(255,255,255,0.08)",
+                    overflow: "hidden",
                   }}
                 >
                   <Box
                     sx={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       bottom: 0,
                       right: 0,
-                      width: '100%',
-                      transformOrigin: 'right',
-                      transform: `scaleX(${Math.max(0, Math.min(1, timePct / 100))})`,
+                      width: "100%",
+                      transformOrigin: "right",
+                      transform: `scaleX(${Math.max(
+                        0,
+                        Math.min(1, timePct / 100)
+                      )})`,
                       backgroundColor: (theme) =>
-                        (theme.palette?.[timeColor]?.main || theme.palette.primary.main),
-                      transition: 'transform 0.3s linear',
+                        theme.palette?.[timeColor]?.main ||
+                        theme.palette.primary.main,
+                      transition: "transform 0.3s linear",
                     }}
                   />
                 </Box>

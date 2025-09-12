@@ -26,9 +26,10 @@ const initials = (name = "", uuid = "") => {
 
 export default function IndividualDayLeaderboard({ day }) {
   const { user } = useAuth();
+  const leaderDay = day.split(" ").join("");
   const { rows, loading, error } = useLeaderboard({
     scope: "day",
-    day,
+    leaderDay,
     limit: 100,
   });
 

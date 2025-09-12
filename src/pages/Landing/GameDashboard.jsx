@@ -45,7 +45,7 @@ const GAMES = [
   {
     key: "selfie",
     title: "Selfie",
-    description: "Selfie Spot Snap a pic with our branding & save the memory!",
+    description: "Snap a pic & save the memory!",
     icon: selfieIcon,
     route: "/selfie",
     bg: "#FF3DF1",
@@ -109,7 +109,7 @@ export default function GameDashboard() {
   // Handlers
   const openLauncher = (key) => async () => {
     try {
-      await (refresh?.());
+      await refresh?.();
     } catch {}
     setLauncherKey(key);
   };
@@ -118,20 +118,25 @@ export default function GameDashboard() {
     // Fetch latest settings and use them immediately to avoid stale day/slot
     let latest = null;
     try {
-      latest = await (refresh?.());
+      latest = await refresh?.();
     } catch {}
     if (!currentGame) return;
 
-    const dayKey = String(latest?.currentDay || currentDay || "day1").toLowerCase();
+    const dayKey = String(
+      latest?.currentDay || currentDay || "day1"
+    ).toLowerCase();
     const slot = Number(latest?.currentSlot || currentSlot || 1);
-    const userObj = user || JSON.parse(localStorage.getItem("ap_user") || "null");
+    const userObj =
+      user || JSON.parse(localStorage.getItem("ap_user") || "null");
     const uuid = userObj?.uuid || userObj?.uniqueNo || null;
 
     const mapGameKey = (k) => (k === "wordsearch" ? "wordSearch" : k);
     const gameParam = mapGameKey(currentGame.key);
 
     // Pass day and slot via query params so the game reads them immediately
-    navigate(`${currentGame.route}?day=${encodeURIComponent(dayKey)}&slot=${slot}`);
+    navigate(
+      `${currentGame.route}?day=${encodeURIComponent(dayKey)}&slot=${slot}`
+    );
     setLauncherKey(null);
   };
 
@@ -165,7 +170,10 @@ export default function GameDashboard() {
         component="img"
         src={game.icon}
         alt={game.title}
-        sx={{ width: { xs: "80%", sm: "90%", md: "85%" }, filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))" }}
+        sx={{
+          width: { xs: "80%", sm: "90%", md: "85%" },
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
+        }}
       />
       <Typography
         sx={{ textAlign: "center", whiteSpace: "nowrap" }}

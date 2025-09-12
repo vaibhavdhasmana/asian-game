@@ -284,7 +284,7 @@ export default function LeaderBoard({ defaultTab = "overall" }) {
         </Tabs>
       </Stack>
 
-      {tab === "day1" && <IndividualDayLeaderboard day="day1" />}
+      {tab === "day1" && <IndividualDayLeaderboard day="day 1" />}
       {tab === "day2" && <GroupedLeaderboard day="day2" />}
       {tab === "day3" && <GroupedLeaderboard day="day3" />}
       {tab === "overall" && <OverallIndividualLeaderboard />}

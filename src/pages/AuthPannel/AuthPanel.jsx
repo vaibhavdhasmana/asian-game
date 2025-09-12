@@ -58,7 +58,7 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
       } else {
         const payload = { name: name.trim(), uuid: uuid.trim() };
         if (!payload.name || !payload.uuid)
-          throw new Error("Name and UID are required.");
+          throw new Error("Name and Mobile are required.");
         const res = await axios.post(
           `${baseUrl}/api/asian-paint/register`,
           payload
@@ -144,7 +144,7 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                 )}
 
                 <TextField
-                  label="UID No :"
+                  label="Mobile No :"
                   variant="standard"
                   fullWidth
                   required

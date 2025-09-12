@@ -142,7 +142,7 @@ export default function Register({ setShowRegister }) {
                   fullWidth
                 />
                 <TextField
-                  label="UID No"
+                  label="Mobile No."
                   name="uniqueNo"
                   value={formData.uniqueNo}
                   onChange={handleChange}
@@ -195,7 +195,7 @@ export default function Register({ setShowRegister }) {
                 sx={{ display: "flex", flexDirection: "column", gap: 2 }}
               >
                 <TextField
-                  label="UID No"
+                  label="Mobile"
                   name="uniqueNo"
                   value={loginFormData.uniqueNo}
                   onChange={handleChange2}
@@ -212,7 +212,7 @@ export default function Register({ setShowRegister }) {
                 </Button>
               </Box>
             </Box>
-  const navigate = useNavigate();
+            {/* const navigate = useNavigate(); */}
           </>
         )}
       </Paper>
