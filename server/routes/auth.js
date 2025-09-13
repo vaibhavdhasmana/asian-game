@@ -8,7 +8,7 @@ router.post("/register", async (req, res) => {
   try {
     const { uuid, name } = req.body || {};
     if (!uuid || !name)
-      return res.status(400).json({ message: "uuid and name are required" });
+      return res.status(400).json({ message: "mobile and name are required" });
     const up = await User.findOneAndUpdate(
       { uuid },
       { $setOnInsert: { name } },

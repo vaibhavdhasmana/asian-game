@@ -91,7 +91,7 @@ export default function Register({ setShowRegister }) {
             {formData.name}!
           </Typography>
           <Typography variant="body1">
-            Your registration with ID <b>{formData.uniqueNo}</b> has been
+            Your registration with us <b>{formData.uniqueNo}</b> has been
             received.
           </Typography>
           <Button
@@ -160,7 +160,11 @@ export default function Register({ setShowRegister }) {
                   onChange={handleChange}
                   required
                   fullWidth
-                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 13 }}
+                  inputProps={{
+                    inputMode: "numeric",
+                    pattern: "[0-9]*",
+                    maxLength: 13,
+                  }}
                   placeholder="10-digit Indian mobile number"
                 />
                 {errorMsg && (

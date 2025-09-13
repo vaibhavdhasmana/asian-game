@@ -54,7 +54,10 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
           return /^[6-9]\d{9}$/.test(ten) ? ten : null;
         };
         const mobile = normalizeMobile(uuid);
-        if (!mobile) throw new Error("Enter a valid Indian mobile number (10 digits starting with 6-9).");
+        if (!mobile)
+          throw new Error(
+            "Enter a valid Indian mobile number (10 digits starting with 6-9)."
+          );
         const res = await axios.post(`${baseUrl}/api/asian-paint/login`, {
           uuid: mobile,
         });
@@ -184,9 +187,12 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                       component="button"
                       type="button"
                       variant="outlined"
-                      color="secondary"
                       underline="hover"
-                      sx={{ fontSize: "16px", fontWeight: 600 }}
+                      sx={{
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        color: "#ba68c8",
+                      }}
                       onClick={() => {
                         if (!loading) {
                           setError(null);
@@ -239,8 +245,12 @@ export default function AuthPanel({ open, mode = "login", onClose, onSwitch }) {
                   type="submit"
                   fullWidth
                   variant="outlined"
-                  color="secondary"
-                  sx={{ fontSize: "18px", mt: 4, fontWeight: 700 }}
+                  sx={{
+                    fontSize: "18px",
+                    mt: 4,
+                    fontWeight: 700,
+                    color: "#ba68c8",
+                  }}
                 >
                   {view === "login" ? "Submit" : "Register"}
                 </LoadingButton>

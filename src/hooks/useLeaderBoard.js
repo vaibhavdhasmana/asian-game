@@ -6,7 +6,7 @@ import { baseUrl } from "../components/constant/constant";
  * Expected API:
  *   GET /api/asian-paint/leaderboard?scope=overall&limit=50
  *   GET /api/asian-paint/leaderboard?scope=day&day=day1&limit=50
- * Optional: &game=crossWord|wordSearch|quiz (if you add per-game leaderboards)
+ * Optional: &game=crossword|wordSearch|jigsaw|quiz (if you add per-game leaderboards)
  *
  * Response shape (preferred):
  *   { leaderboard: [{ name, uuid, total }] }
@@ -17,19 +17,18 @@ import { baseUrl } from "../components/constant/constant";
  */
 
 const vNum = (x) => (typeof x === "number" && !Number.isNaN(x) ? x : 0);
+const GAMES = ["crossword", "wordSearch", "jigsaw", "quiz"];
 
 function sumScoreAllDays(score = {}) {
-  const g = ["crossWord", "wordSearch", "quiz"];
   const d = ["day1", "day2", "day3"];
-  return g.reduce((acc, game) => {
+  return GAMES.reduce((acc, game) => {
     const s = score[game] || {};
     return acc + d.reduce((a, day) => a + vNum(s[day]), 0);
   }, 0);
 }
 
 function sumScoreForDay(score = {}, dayKey = "day1") {
-  const g = ["crossWord", "wordSearch", "quiz"];
-  return g.reduce((acc, game) => acc + vNum(score?.[game]?.[dayKey]), 0);
+  return GAMES.reduce((acc, game) => acc + vNum(score?.[game]?.[dayKey]), 0);
 }
 
 export default function useLeaderboard({
