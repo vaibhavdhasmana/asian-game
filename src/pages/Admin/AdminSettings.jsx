@@ -15,7 +15,9 @@ import {
 } from "@mui/material";
 import UploadCard from "../../components/admin/UploadCard";
 import ContentBrowser from "../../components/admin/ContentBrowser";
+import ServerSettingsViewer from "../../components/admin/ServerSettingsViewer";
 import axios from "axios";
+import { Alert as MuiAlert, Snackbar } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { baseUrl } from "../../components/constant/constant";
 
@@ -28,6 +30,8 @@ export default function AdminSettings() {
   const [currentSlot, setCurrentSlot] = React.useState(1);
   const [slotsPerDay, setSlotsPerDay] = React.useState({ day1: 1, day2: 1, day3: 1 });
   const [slotsDraft, setSlotsDraft] = React.useState("");
+  const [snack, setSnack] = React.useState({ open: false, message: "", severity: "success" });
+  const [refreshTick, setRefreshTick] = React.useState(0);
 
   React.useEffect(() => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
@@ -44,12 +48,20 @@ export default function AdminSettings() {
 
   // Keep draft in sync when switching tabs or when server state changes
   React.useEffect(() => {
-    setSlotsDraft(String(slotsPerDay[tab] ?? ""));
-  }, [tab, slotsPerDay]);
+    // Keep draft synced to the currently selected Active Day
+    setSlotsDraft(String(slotsPerDay[currentDay] ?? ""));
+  }, [currentDay, slotsPerDay]);
 
   const saveDay = async () => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
-    await axios.post(`${baseUrl}/api/admin/settings/day`, { currentDay }, { headers });
+    try {
+      await axios.post(`${baseUrl}/api/admin/settings/day`, { currentDay }, { headers });
+      setSnack({ open: true, message: `Active day set to ${currentDay.toUpperCase()}`, severity: "success" });
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      const msg = e?.response?.data?.message || (e?.response?.status === 401 ? "Admin key/privileges required" : "Failed to save day");
+      setSnack({ open: true, message: msg, severity: "error" });
+    }
   };
   const onAnyUpload = () => {
     // toast or refresh status if needed
@@ -57,19 +69,34 @@ export default function AdminSettings() {
 
   const saveSlot = async () => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
-    await axios.post(`${baseUrl}/api/admin/settings/slot`, { currentSlot }, { headers });
+    try {
+      await axios.post(`${baseUrl}/api/admin/settings/slot`, { currentSlot }, { headers });
+      setSnack({ open: true, message: `Active slot set to ${currentSlot}`, severity: "success" });
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      const msg = e?.response?.data?.message || (e?.response?.status === 401 ? "Admin key/privileges required" : "Failed to save slot");
+      setSnack({ open: true, message: msg, severity: "error" });
+    }
   };
   const saveSlotsPerDay = async () => {
     const headers = user?.isAdmin && user?.uuid ? { "x-admin-uuid": user.uuid } : { "x-admin-key": adminKey };
     const nRaw = slotsDraft.trim();
     const nParsed = Number(nRaw);
     const n = Number.isFinite(nParsed) && nParsed > 0 ? Math.floor(nParsed) : 1;
-    await axios.post(`${baseUrl}/api/admin/settings/slots-per-day`, { day: tab, slots: n }, { headers });
-    setSlotsPerDay((s) => ({ ...s, [tab]: n }));
-    setSlotsDraft(String(n));
+    try {
+      await axios.post(`${baseUrl}/api/admin/settings/slots-per-day`, { day: currentDay, slots: n }, { headers });
+      setSlotsPerDay((s) => ({ ...s, [currentDay]: n }));
+      setSlotsDraft(String(n));
+      setSnack({ open: true, message: `Saved ${n} slots for ${currentDay.toUpperCase()}`, severity: "success" });
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      const msg = e?.response?.data?.message || (e?.response?.status === 401 ? "Admin key/privileges required" : "Failed to save slots");
+      setSnack({ open: true, message: msg, severity: "error" });
+    }
   };
 
   return (
+    <>
     <Container maxWidth="lg" sx={{ py: 3, mt: 6 }}>
       <Stack
         direction="row"
@@ -109,7 +136,7 @@ export default function AdminSettings() {
           <TextField
             size="small"
             type="number"
-            label={`Slots (${tab})`}
+            label={`Slots (${currentDay})`}
             inputProps={{ min: 1 }}
             value={slotsDraft}
             onChange={(e) => setSlotsDraft(e.target.value)}
@@ -131,6 +158,13 @@ export default function AdminSettings() {
           <Button variant="outlined" onClick={saveSlot}>Activate</Button>
         </Stack>
       </Stack>
+      <Box sx={{ mb: 2 }}>
+        <ServerSettingsViewer
+          adminKey={adminKey}
+          adminUuid={user?.isAdmin ? user?.uuid : undefined}
+          refreshKey={refreshTick}
+        />
+      </Box>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab value="day1" label="Day 1" />
         <Tab value="day2" label="Day 2" />
@@ -247,5 +281,16 @@ export default function AdminSettings() {
         />
       </Box>
     </Container>
+    <Snackbar
+      open={snack.open}
+      autoHideDuration={2000}
+      onClose={() => setSnack((s) => ({ ...s, open: false }))}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <MuiAlert elevation={6} variant="filled" severity={snack.severity} sx={{ width: '100%' }}>
+        {snack.message}
+      </MuiAlert>
+    </Snackbar>
+    </>
   );
 }
