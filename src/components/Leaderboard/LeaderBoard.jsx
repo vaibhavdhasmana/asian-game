@@ -254,7 +254,7 @@ export default function LeaderBoard({ defaultTab = "overall" }) {
   }, [visibleTabs, tab]);
 
   return (
-    <Paper elevation={6} sx={{ p: 2, borderRadius: 3 }}>
+    <Paper elevation={6} sx={{ p: { md: 2, xs: "16px 8px" }, borderRadius: 3 }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         alignItems="center"

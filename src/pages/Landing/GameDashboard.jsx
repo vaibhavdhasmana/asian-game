@@ -176,8 +176,8 @@ export default function GameDashboard() {
         }}
       />
       <Typography
-        sx={{ textAlign: "center", whiteSpace: "nowrap" }}
-        variant="h6"
+        sx={{ textAlign: "center", whiteSpace: "nowrap", fontSize: "1.1rem" }}
+        // variant="h6"
         fontWeight={900}
       >
         {game.title}

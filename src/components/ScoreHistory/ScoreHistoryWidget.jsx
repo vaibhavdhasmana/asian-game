@@ -41,7 +41,7 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
     const d = String(currentDay);
     if (d === "day1") return ["day1"];
     if (d === "day2") return ["day1", "day2"];
-    return allowedDays;
+    return ["day1", "day2", "day3"];
   }, [currentDay]);
 
   if (!isAuthed) return null;

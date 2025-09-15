@@ -40,15 +40,19 @@ export default function GroupedLeaderboard({ day }) {
   return (
     <Box sx={{ display: "grid", gap: 1.5 }}>
       {groups.map((g, idx) => (
-        <Accordion key={g.groupKey} disableGutters>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion key={g.groupKey} disableGutters sx={{}}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{ padding: { xs: "0px 8px", md: "0px 16px" } }}
+          >
             <Stack
               direction="row"
               spacing={1}
               alignItems="center"
               sx={{
-                fontSize: { xs: "12px", md: "18px" },
-                fontWeight: 600,
+                fontSize: { xs: "10px", md: "18px" },
+
+                fontWeight: 500,
                 width: "100%",
                 justifyContent: "space-between",
               }}
@@ -56,7 +60,7 @@ export default function GroupedLeaderboard({ day }) {
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip size="small" label={`#${idx + 1}`} />
                 <Chip
-                  sx={{ fontSize: { xs: "12px", md: "18px" }, fontWeight: 600 }}
+                  sx={{ fontSize: { xs: "10px", md: "18px" }, fontWeight: 500 }}
                   size="small"
                   label={(g.label || g.groupKey || "").toUpperCase()}
                 />
@@ -67,11 +71,11 @@ export default function GroupedLeaderboard({ day }) {
                 <StarsSharpIcon sx={{ color: "warning.light" }} />
               ) : null}
               <Chip
-                icon={<EmojiEventsIcon />}
+                icon={<EmojiEventsIcon sx={{ fontSize: "13px" }} />}
                 color="warning"
                 variant="outlined"
-                label={`Score: ${g.total}`}
-                sx={{ fontSize: { xs: "12px", md: "18px" }, fontWeight: 600 }}
+                label={`Score:${g.total}`}
+                sx={{ fontSize: { xs: "10px", md: "18px" }, fontWeight: 600 }}
               />
             </Stack>
           </AccordionSummary>

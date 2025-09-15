@@ -258,6 +258,7 @@ export default function JigsawMUI2() {
           params: { day: dayKey, game: "jigsaw", uuid, slot },
         });
         const p = data?.payload || {};
+        console.log("p", p);
         setServerCfg({
           imageUrl: p.imageUrl || null,
           pointsPerTile: Number(p.pointsPerTile) || null,
@@ -632,15 +633,19 @@ export default function JigsawMUI2() {
   }
   if (finished || timeUp || alreadySubmitted) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+      <Box
+        sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}
+      >
         <Card sx={{ maxWidth: 520 }}>
           <CardContent>
             <Stack spacing={2} alignItems="center">
               <Typography variant="h6" fontWeight={800} align="center">
-                Jigsaw {finished ? 'Completed' : 'Ended'}
+                Jigsaw {finished ? "Completed" : "Ended"}
               </Typography>
               <NextRoundNotice day={dayKey} slot={slot} />
-              <Button variant="contained" onClick={() => navigate('/')}>Home</Button>
+              <Button variant="contained" onClick={() => navigate("/")}>
+                Home
+              </Button>
             </Stack>
           </CardContent>
         </Card>

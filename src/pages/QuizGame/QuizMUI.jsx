@@ -368,6 +368,18 @@ export default function QuizMUI() {
     submitScore();
   };
 
+  // Prevent copying/selection/context menu on quiz content while playing
+  const preventCopy = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const noCopyHandlers = {
+    onContextMenu: preventCopy,
+    onCopy: preventCopy,
+    onCut: preventCopy,
+    onDragStart: preventCopy,
+  };
+
   // Guards
   if (!serverLockChecked) {
     return (
@@ -504,13 +516,28 @@ export default function QuizMUI() {
             </Paper>
 
             {!finished ? (
-              <Card elevation={6}>
+              <Card
+                elevation={6}
+                {...noCopyHandlers}
+                sx={{
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  MozUserSelect: "none",
+                  MsUserSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
                 <CardHeader
                   title={
                     <Typography
                       sx={{
                         fontSize: { xs: "1rem", md: "1.2rem" },
                         fontWeight: 600,
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
+                        MozUserSelect: "none",
+                        MsUserSelect: "none",
+                        WebkitTouchCallout: "none",
                       }}
                     >
                       {quiz[qIndex]?.question}
@@ -557,8 +584,14 @@ export default function QuizMUI() {
                             textTransform: "none",
                             fontWeight: 700,
                             py: 1.25,
+                            userSelect: "none",
+                            WebkitUserSelect: "none",
+                            MozUserSelect: "none",
+                            MsUserSelect: "none",
+                            WebkitTouchCallout: "none",
                           }}
                           fullWidth
+                          onContextMenu={preventCopy}
                         >
                           <Box
                             component="span"
@@ -568,6 +601,11 @@ export default function QuizMUI() {
                               fontWeight: 800,
                               minWidth: 22,
                               display: "inline-block",
+                              userSelect: "none",
+                              WebkitUserSelect: "none",
+                              MozUserSelect: "none",
+                              MsUserSelect: "none",
+                              WebkitTouchCallout: "none",
                             }}
                           >
                             {String.fromCharCode(65 + idx)}.
@@ -669,7 +707,8 @@ export default function QuizMUI() {
                       <Paper
                         key={q.id ?? i}
                         variant="outlined"
-                        sx={{ p: 1.5, mb: 1 }}
+                        sx={{ p: 1.5, mb: 1, userSelect: "none" }}
+                        onContextMenu={preventCopy}
                       >
                         <Typography fontWeight={700}>
                           {i + 1}. {q.question}
