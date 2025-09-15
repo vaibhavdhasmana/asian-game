@@ -21,8 +21,8 @@ import useUserScores from "../../hooks/useUserScores";
 import useGameSettings from "../../hooks/useGameSettings";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 const GAME_LABELS = { quiz: "Quiz", wordSearch: "Word Search", jigsaw: "Jigsaw" };
-const DAY_LABELS = { day1: "Day 1", day2: "Day 2", day3: "Day 3" };
-const gameTotal = (g = {}) => (g.day1 || 0) + (g.day2 || 0) + (g.day3 || 0);
+const DAY_LABELS = { day1: "Day 1", day2: "Day 2", day3: "Day 3", day4: "Day 4" };
+const gameTotal = (g = {}) => (g.day1 || 0) + (g.day2 || 0) + (g.day3 || 0) + (g.day4 || 0);
 
 /**
  * Props:
@@ -41,7 +41,8 @@ export default function ScoreHistoryWidget({ anchor = "right", paperSx }) {
     const d = String(currentDay);
     if (d === "day1") return ["day1"];
     if (d === "day2") return ["day1", "day2"];
-    return ["day1", "day2", "day3"];
+    if (d === "day3") return ["day1", "day2", "day3"];
+    return ["day1", "day2", "day3", "day4"];
   }, [currentDay]);
 
   if (!isAuthed) return null;

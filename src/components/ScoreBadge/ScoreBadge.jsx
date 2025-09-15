@@ -72,7 +72,7 @@ export default function ScoreBadge() {
   const dayKey = String(currentDay).toLowerCase().replace(/\s+/g, "");
   const storageKey = `ap_group_key`;
   const savedGroup =
-    currentDay === "day2" || currentDay === "day3"
+    currentDay === "day2" || currentDay === "day3" || currentDay === "day4"
       ? localStorage.getItem(storageKey) || ""
       : "";
 

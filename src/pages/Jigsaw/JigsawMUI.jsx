@@ -45,6 +45,7 @@ import NextRoundNotice from "../../components/NextRoundNotice/NextRoundNotice";
 import jigsawDay1 from "../../assets/jigsaw/day1.jpg"; // Day 1 image
 import jigsawDay2 from "../../assets/jigsaw/day2.jpg"; // Day 2 image
 import jigsawDay3 from "../../assets/jigsaw/day3.jpg"; // Day 3 image
+import jigsawDay4 from "../../assets/jigsaw/day4.jpg"; // Day 4 image
 
 /* ==============================
    DAY CONFIG (edit only this)
@@ -53,6 +54,7 @@ const DAY_CFG = {
   day1: { image: jigsawDay1, pointsPerTile: 10, timerSeconds: 120 },
   day2: { image: jigsawDay2, pointsPerTile: 15, timerSeconds: 90 },
   day3: { image: jigsawDay3, pointsPerTile: 20, timerSeconds: 60 },
+  day4: { image: jigsawDay4, pointsPerTile: 15, timerSeconds: 90 },
 };
 
 /* ==============================
@@ -119,8 +121,8 @@ export default function JigsawMUI() {
     gs.settings?.day ||
     "day1";
   const dayKey = useMemo(() => {
-    const v = (queryDay || String(rawDay).toLowerCase());
-    return ["day1", "day2", "day3"].includes(v) ? v : "day1";
+    const v = queryDay || String(rawDay).toLowerCase();
+    return ["day1", "day2", "day3", "day4"].includes(v) ? v : "day1";
   }, [queryDay, rawDay]);
   const slot = useMemo(() => {
     const s = parseInt(searchParams.get("slot"), 10);
@@ -142,7 +144,7 @@ export default function JigsawMUI() {
         const user = JSON.parse(localStorage.getItem("ap_user") || "null");
         const uuid = user?.uuid || user?.uniqueNo;
         const { data } = await axios.get(`${baseUrl}/api/asian-paint/content`, {
-      params: { day: dayKey, game: "jigsaw", uuid, slot },
+          params: { day: dayKey, game: "jigsaw", uuid, slot },
         });
         const p = data?.payload || {};
         setServerCfg({
@@ -150,7 +152,8 @@ export default function JigsawMUI() {
           pointsPerTile: Number(p.pointsPerTile) || null,
           timerSeconds: Number(p.timerSeconds || p.timeLimit) || null,
         });
-      } catch {} finally {
+      } catch {
+      } finally {
         setContentLoading(false);
       }
     })();
@@ -189,9 +192,12 @@ export default function JigsawMUI() {
           setAlreadySubmitted(false);
           return;
         }
-        const { data } = await axios.get(`${baseUrl}/api/asian-paint/score/status`, {
-          params: { uuid, game: "jigsaw", day: dayKey, slot },
-        });
+        const { data } = await axios.get(
+          `${baseUrl}/api/asian-paint/score/status`,
+          {
+            params: { uuid, game: "jigsaw", day: dayKey, slot },
+          }
+        );
         if (data?.submitted) {
           localStorage.setItem(KEYS.done, "true");
           if (typeof data.points === "number") {
@@ -211,8 +217,8 @@ export default function JigsawMUI() {
           localStorage.removeItem(KEYS.done);
           setAlreadySubmitted(false);
         }
-      } catch {}
-      finally {
+      } catch {
+      } finally {
         setServerLockChecked(true);
       }
     })();
@@ -288,7 +294,8 @@ export default function JigsawMUI() {
 
   const SAFE_TIMER = Number(TIMER_SECONDS) > 0 ? Number(TIMER_SECONDS) : 1;
   const timePct = Math.max(0, Math.min(100, (secondsLeft / SAFE_TIMER) * 100));
-  const timeColor = secondsLeft <= 10 ? "error" : secondsLeft <= 20 ? "warning" : "primary";
+  const timeColor =
+    secondsLeft <= 10 ? "error" : secondsLeft <= 20 ? "warning" : "primary";
   const progressPct = (credited.size / totalTiles) * 100;
 
   /* ---------- Server lock + resume ---------- */
@@ -494,9 +501,11 @@ export default function JigsawMUI() {
   const swap = (i, j) => {
     if (finished || timeUp || alreadySubmitted) return;
     // Freeze any correctly placed tiles
-    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j)) return;
+    if (order[i] === i || order[j] === j || credited.has(i) || credited.has(j))
+      return;
     setOrder((prev) => {
-      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j)) return prev;
+      if (prev[i] === i || prev[j] === j || credited.has(i) || credited.has(j))
+        return prev;
       const next = prev.slice();
       [next[i], next[j]] = [next[j], next[i]];
 
@@ -552,7 +561,10 @@ export default function JigsawMUI() {
       setSelectedIndex(null);
     } else {
       // prevent swapping with a frozen tile
-      if (order[selectedIndex] === selectedIndex || order[boardIndex] === boardIndex) {
+      if (
+        order[selectedIndex] === selectedIndex ||
+        order[boardIndex] === boardIndex
+      ) {
         setSelectedIndex(null);
         return;
       }
@@ -607,15 +619,19 @@ export default function JigsawMUI() {
   // Show only the message when the attempt is over/locked
   if (finished || timeUp || alreadySubmitted) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+      <Box
+        sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}
+      >
         <Card sx={{ maxWidth: 520 }}>
           <CardContent>
             <Stack spacing={2} alignItems="center">
               <Typography variant="h6" fontWeight={800} align="center">
-                Jigsaw {finished ? 'Completed' : 'Ended'}
+                Jigsaw {finished ? "Completed" : "Ended"}
               </Typography>
               <NextRoundNotice day={dayKey} slot={slot} />
-              <Button variant="contained" onClick={() => navigate('/')}>Home</Button>
+              <Button variant="contained" onClick={() => navigate("/")}>
+                Home
+              </Button>
             </Stack>
           </CardContent>
         </Card>
@@ -788,25 +804,29 @@ export default function JigsawMUI() {
               <Box sx={{ mt: 2 }}>
                 <Box
                   sx={{
-                    position: 'relative',
+                    position: "relative",
                     height: 8,
                     borderRadius: 999,
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    overflow: 'hidden',
+                    bgcolor: "rgba(255,255,255,0.08)",
+                    overflow: "hidden",
                   }}
                 >
                   <Box
                     sx={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       bottom: 0,
                       right: 0,
-                      width: '100%',
-                      transformOrigin: 'right',
-                      transform: `scaleX(${Math.max(0, Math.min(1, timePct / 100))})`,
+                      width: "100%",
+                      transformOrigin: "right",
+                      transform: `scaleX(${Math.max(
+                        0,
+                        Math.min(1, timePct / 100)
+                      )})`,
                       backgroundColor: (theme) =>
-                        (theme.palette?.[timeColor]?.main || theme.palette.primary.main),
-                      transition: 'transform 0.3s linear',
+                        theme.palette?.[timeColor]?.main ||
+                        theme.palette.primary.main,
+                      transition: "transform 0.3s linear",
                     }}
                   />
                 </Box>
@@ -927,16 +947,18 @@ export default function JigsawMUI() {
                               "outline 120ms, box-shadow 120ms, transform 120ms",
                             "&:active": {
                               transform:
-                                alreadySubmitted || timeUp || finished || correct
+                                alreadySubmitted ||
+                                timeUp ||
+                                finished ||
+                                correct
                                   ? "none"
                                   : "scale(0.98)",
                             },
                             // Stronger highlight for correctly placed tiles
                             filter: correct ? "brightness(1.1)" : "none",
-                            border:
-                              correct
-                                ? "2px solid rgba(56,142,60,0.95)"
-                                : "1px solid rgba(255,255,255,0.12)",
+                            border: correct
+                              ? "2px solid rgba(56,142,60,0.95)"
+                              : "1px solid rgba(255,255,255,0.12)",
                           }}
                         />
                       );
@@ -946,7 +968,7 @@ export default function JigsawMUI() {
 
                 {(finished || timeUp) && (
                   <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
-                    <Box sx={{ mb: 1.5, width: '100%' }}>
+                    <Box sx={{ mb: 1.5, width: "100%" }}>
                       <NextRoundNotice day={dayKey} slot={slot} />
                     </Box>
                     <Button
@@ -963,7 +985,6 @@ export default function JigsawMUI() {
           </Stack>
         </Grid>
       </Grid>
-
 
       {/* Reference Image Dialog */}
       <Dialog
@@ -1025,6 +1046,3 @@ export default function JigsawMUI() {
     </Box>
   );
 }
-
-
-

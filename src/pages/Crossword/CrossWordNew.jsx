@@ -194,7 +194,7 @@ export default function CrossWordNew() {
     "day1";
   const dayKey = useMemo(() => {
     const v = String(rawDay).toLowerCase();
-    return ["day1", "day2", "day3"].includes(v) ? v : "day1";
+    return ["day1", "day2", "day3", "day4"].includes(v) ? v : "day1";
   }, [rawDay]);
   const slot = Number(gs.currentSlot) || 1;
 

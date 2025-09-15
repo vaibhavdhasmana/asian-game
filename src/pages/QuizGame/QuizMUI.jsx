@@ -47,7 +47,7 @@ export default function QuizMUI() {
     "day1";
   const dayKey = useMemo(() => {
     const v = queryDay || String(rawDay).toLowerCase();
-    return ["day1", "day2", "day3"].includes(v) ? v : "day1";
+    return ["day1", "day2", "day3", "day4"].includes(v) ? v : "day1";
   }, [queryDay, rawDay]);
   const slot = useMemo(() => {
     const s = parseInt(searchParams.get("slot"), 10);

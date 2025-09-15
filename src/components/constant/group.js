@@ -2,6 +2,7 @@
 export const GROUPS = {
   day2: ["queen", "king", "bishop", "rook"],
   day3: ["queen", "king", "bishop", "rook"],
+  day4: ["queen", "king", "bishop", "rook"],
 };
 
 // Labels for UI

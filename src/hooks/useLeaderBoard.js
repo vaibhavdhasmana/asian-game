@@ -20,7 +20,7 @@ const vNum = (x) => (typeof x === "number" && !Number.isNaN(x) ? x : 0);
 const GAMES = ["crossword", "wordSearch", "jigsaw", "quiz"];
 
 function sumScoreAllDays(score = {}) {
-  const d = ["day1", "day2", "day3"];
+  const d = ["day1", "day2", "day3", "day4"];
   return GAMES.reduce((acc, game) => {
     const s = score[game] || {};
     return acc + d.reduce((a, day) => a + vNum(s[day]), 0);

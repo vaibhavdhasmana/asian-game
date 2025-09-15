@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { baseUrl } from "../components/constant/constant";
 
-export default function useGroupedLeaderboard(day /* "day2"|"day3" */) {
+export default function useGroupedLeaderboard(day /* "day2"|"day3"|"day4" */) {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

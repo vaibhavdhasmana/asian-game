@@ -50,7 +50,7 @@ export default function ServerSettingsViewer({ adminKey, adminUuid, refreshKey }
             <Chip size="small" color="primary" label={`Day: ${labelDay}`} />
             <Chip size="small" color="secondary" label={`Active slot: ${data.currentSlot}`} />
             <Tooltip title="Slots per day">
-              <Chip size="small" label={`Slots — D1:${spd.day1 ?? 1}, D2:${spd.day2 ?? 1}, D3:${spd.day3 ?? 1}`} />
+              <Chip size="small" label={`Slots — D1:${spd.day1 ?? 1}, D2:${spd.day2 ?? 1}, D3:${spd.day3 ?? 1}, D4:${spd.day4 ?? 1}`} />
             </Tooltip>
           </Stack>
         )}

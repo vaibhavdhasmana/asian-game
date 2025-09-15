@@ -80,10 +80,14 @@ export default function GameDashboard() {
 
   const [snack, setSnack] = React.useState({ open: false, message: "" });
 
-  // Prompt group selection on day2/day3con if not set
+  // Prompt group selection on day2/day3/day4 if not set
   React.useEffect(() => {
     if (!isAuthed) return;
-    if (currentDay === "day2" || currentDay === "day3") {
+    if (
+      currentDay === "day2" ||
+      currentDay === "day3" ||
+      currentDay === "day4"
+    ) {
       const saved = localStorage.getItem(GROUP_KEY);
       if (!saved) setShowGroup(true);
     }
@@ -190,8 +194,8 @@ export default function GameDashboard() {
       {/* Fixed badges (Day badge hidden per request) */}
       <ScoreBadge />
 
-      {/* Group header (visible on day2/day3 when user picked a group) */}
-      {["day2", "day3"].includes(currentDay) &&
+      {/* Group header (visible on day2/day3/day4 when user picked a group) */}
+      {["day2", "day3", "day4"].includes(currentDay) &&
       localStorage.getItem(GROUP_KEY) ? (
         <GroupHeader
           day={currentDay}
@@ -220,7 +224,7 @@ export default function GameDashboard() {
         Welcome !
       </Typography> */}
 
-      {/* Group picker when admin set day2/3 */}
+      {/* Group picker when admin set day2/3/4 */}
       <GroupSelectDialog
         open={showGroup}
         onClose={() => setShowGroup(false)}

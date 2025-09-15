@@ -45,6 +45,7 @@ import useGameSettings from "../../hooks/useGameSettings";
 import jigsawDay1 from "../../assets/jigsaw/1.png";
 import jigsawDay2 from "../../assets/jigsaw/2.png";
 import jigsawDay3 from "../../assets/jigsaw/3.png";
+import jigsawDay4 from "../../assets/jigsaw/4.png";
 
 /* ==============================
    DAY CONFIG (edit only this)
@@ -53,6 +54,7 @@ const DAY_CFG = {
   day1: { image: jigsawDay1, pointsPerTile: 6.25, timerSeconds: 180 },
   day2: { image: jigsawDay2, pointsPerTile: 6.25, timerSeconds: 180 },
   day3: { image: jigsawDay3, pointsPerTile: 6.25, timerSeconds: 180 },
+  day4: { image: jigsawDay4, pointsPerTile: 6.25, timerSeconds: 180 },
 };
 
 /* ==============================
@@ -233,7 +235,7 @@ export default function JigsawMUI2() {
     "day1";
   const dayKey = useMemo(() => {
     const v = queryDay || String(rawDay).toLowerCase();
-    return ["day1", "day2", "day3"].includes(v) ? v : "day1";
+    return ["day1", "day2", "day3", "day4"].includes(v) ? v : "day1";
   }, [queryDay, rawDay]);
   const slot = useMemo(() => {
     const s = parseInt(searchParams.get("slot"), 10);

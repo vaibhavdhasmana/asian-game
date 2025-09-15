@@ -6,6 +6,7 @@ const SCHEDULE = {
   day1: ["—", "9:00 pm", "5:00 pm", "6:30 pm"],
   day2: ["—", "9:00 am", "12:00 pm", "4:00 pm", "6:00 pm"],
   day3: ["—", "9:00 am", "1:00 pm", "4:00 pm"],
+  day4: ["—", "9:00 am", "1:00 pm", "4:00 pm"],
 };
 
 export default function NextRoundNotice({ day = "day1", slot = 1, sx }) {

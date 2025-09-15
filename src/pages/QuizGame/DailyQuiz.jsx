@@ -35,11 +35,12 @@ const DAYS = [
   { key: "day1", label: "Day 1" },
   { key: "day2", label: "Day 2" },
   { key: "day3", label: "Day 3" },
+  { key: "day4", label: "Day 4" },
 ];
 
 export default function DailyQuiz({
   uuid: uuidProp, // optional override
-  defaultDay, // optional: "day1" | "day2" | "day3"
+  defaultDay, // optional: "day1" | "day2" | "day3" | "day4"
   onClose, // optional: if rendered inside a Dialog
   dense = false, // slightly compact UI
 }) {

@@ -30,11 +30,19 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
 
   const [groupKey, setGroupKey] = React.useState("");
   const { groups } = useGameSettings();
+
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
 
   const dayKey = String(day).toLowerCase().replace(/\s+/g, "");
-  const list = dayKey === "day2" ? groups.day2 : dayKey === "day3" ? groups.day3 : [];
+  const list =
+    dayKey === "day2"
+      ? groups.day2
+      : dayKey === "day3"
+      ? groups.day3
+      : dayKey === "day4"
+      ? groups.day4
+      : [];
   // Default to saved value (if any) or first in list
   React.useEffect(() => {
     const saved = localStorage.getItem("ap_group_key") || "";
@@ -141,9 +149,21 @@ export default function GroupSelectDialog({ open, onClose, day, onSelect }) {
           <MenuItem key={key} value={key}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               {GROUP_LOGO[key] ? (
-                <Box component="img" src={GROUP_LOGO[key]} alt={key} sx={{ width: 18, height: 18, borderRadius: '50%' }} />
+                <Box
+                  component="img"
+                  src={GROUP_LOGO[key]}
+                  alt={key}
+                  sx={{ width: 18, height: 18, borderRadius: "50%" }}
+                />
               ) : (
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'divider' }} />
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    bgcolor: "divider",
+                  }}
+                />
               )}
               {GROUP_LABEL[key] || cap(key)}
             </Box>

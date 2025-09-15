@@ -91,6 +91,7 @@ export default function QuizUpload({ open, onClose }) {
   const colorsForDay = useMemo(() => {
     if (day === "day2") return groupsColors.day2 || [];
     if (day === "day3") return groupsColors.day3 || [];
+    if (day === "day4") return groupsColors.day4 || [];
     return [];
   }, [day, groupsColors]);
 
@@ -124,14 +125,14 @@ export default function QuizUpload({ open, onClose }) {
     if (!file)
       return setMsg({ type: "error", text: "Please choose a CSV file" });
     if (!day) return setMsg({ type: "error", text: "Select a day" });
-    if (day !== "day1" && !color)
+    if ((day === "day2" || day === "day3" || day === "day4") && !color)
       return setMsg({ type: "error", text: "Select a color group" });
 
     try {
       setBusy(true);
       setMsg({ type: "info", text: "Uploading…" });
       const qs = new URLSearchParams({ day, game: "quiz" });
-      if (day !== "day1") qs.set("group", groupKey);
+      if (day === "day2" || day === "day3" || day === "day4") qs.set("group", groupKey);
 
       const fd = new FormData();
       fd.append("file", file);
@@ -207,10 +208,11 @@ export default function QuizUpload({ open, onClose }) {
                 <MenuItem value="day1">Day 1</MenuItem>
                 <MenuItem value="day2">Day 2</MenuItem>
                 <MenuItem value="day3">Day 3</MenuItem>
+                <MenuItem value="day4">Day 4</MenuItem>
               </Select>
             </FormControl>
 
-            {day !== "day1" && (
+            {(day === "day2" || day === "day3" || day === "day4") && (
               <>
                 <FormControl fullWidth>
                   <InputLabel>Group Color</InputLabel>

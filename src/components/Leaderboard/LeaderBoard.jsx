@@ -26,6 +26,7 @@
 //   { key: "day1", label: "Day 1" },
 //   { key: "day2", label: "Day 2" },
 //   { key: "day3", label: "Day 3" },
+//   { key: "day4", label: "Day 4" },
 //   { key: "overall", label: "Overall" },
 // ];
 
@@ -230,6 +231,7 @@ const TABS = [
   { key: "day1", label: "Day 1" },
   { key: "day2", label: "Day 2" },
   { key: "day3", label: "Day 3" },
+  { key: "day4", label: "Day 4" },
   { key: "overall", label: "Overall" },
 ];
 
@@ -240,7 +242,8 @@ export default function LeaderBoard({ defaultTab = "overall" }) {
     const days = [];
     if (currentDay === "day1") days.push("day1");
     else if (currentDay === "day2") days.push("day1", "day2");
-    else days.push("day1", "day2", "day3");
+    else if (currentDay === "day3") days.push("day1", "day2", "day3");
+    else days.push("day1", "day2", "day3", "day4");
     return [
       ...TABS.filter((t) => days.includes(t.key)),
       TABS.find((t) => t.key === "overall"),
@@ -287,6 +290,7 @@ export default function LeaderBoard({ defaultTab = "overall" }) {
       {tab === "day1" && <IndividualDayLeaderboard day="day 1" />}
       {tab === "day2" && <GroupedLeaderboard day="day2" />}
       {tab === "day3" && <GroupedLeaderboard day="day3" />}
+      {tab === "day4" && <GroupedLeaderboard day="day4" />}
       {tab === "overall" && <OverallIndividualLeaderboard />}
     </Paper>
   );

@@ -7,7 +7,7 @@ import { baseUrl } from "../components/constant/constant";
 export default function useGameSettings() {
   const [currentDay, setCurrentDay] = useState("day1");
   const [currentSlot, setCurrentSlot] = useState(1);
-  const [groups, setGroups] = useState({ day2: GROUPS.day2, day3: GROUPS.day3 });
+  const [groups, setGroups] = useState({ day2: GROUPS.day2, day3: GROUPS.day3, day4: GROUPS.day4 });
   const [loading, setLoading] = useState(false);
   // No polling by default to avoid server load. Call refresh() on game launch.
 
@@ -34,22 +34,25 @@ export default function useGameSettings() {
         ? Number(data.currentSlot) || 1
         : currentSlot;
 
-      let nextGroups = { day2: GROUPS.day2, day3: GROUPS.day3 };
-      if (data.groups && (Array.isArray(data.groups.day2) || Array.isArray(data.groups.day3))) {
+      let nextGroups = { day2: GROUPS.day2, day3: GROUPS.day3, day4: GROUPS.day4 };
+      if (data.groups && (Array.isArray(data.groups.day2) || Array.isArray(data.groups.day3) || Array.isArray(data.groups.day4))) {
         nextGroups = {
           day2: (data.groups.day2 || []).map((g) => g.key || g).filter(Boolean),
           day3: (data.groups.day3 || []).map((g) => g.key || g).filter(Boolean),
+          day4: (data.groups.day4 || []).map((g) => g.key || g).filter(Boolean),
         };
       } else if (data.groupsColors) {
         // legacy fallback
         nextGroups = {
           day2: normalizeColors(data.groupsColors.day2 ?? GROUPS.day2, GROUPS.day2),
           day3: normalizeColors(data.groupsColors.day3 ?? GROUPS.day3, GROUPS.day3),
+          day4: normalizeColors(data.groupsColors.day4 ?? GROUPS.day4, GROUPS.day4),
         };
       } else if (data.groupsPerDay) {
         nextGroups = {
           day2: normalizeColors(data.groupsPerDay.day2, GROUPS.day2),
           day3: normalizeColors(data.groupsPerDay.day3, GROUPS.day3),
+          day4: normalizeColors(data.groupsPerDay.day4, GROUPS.day4),
         };
       }
 

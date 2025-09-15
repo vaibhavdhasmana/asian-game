@@ -11,16 +11,18 @@ const GroupSchema = new mongoose.Schema(
 
 const AdminSettingsSchema = new mongoose.Schema(
   {
-    currentDay: { type: String, enum: ['day1', 'day2', 'day3'], default: 'day1' },
+    currentDay: { type: String, enum: ['day1', 'day2', 'day3', 'day4'], default: 'day1' },
     currentSlot: { type: Number, default: 1 },
     slotsPerDay: {
       day1: { type: Number, default: 1 },
       day2: { type: Number, default: 1 },
       day3: { type: Number, default: 1 },
+      day4: { type: Number, default: 1 },
     },
     groups: {
       day2: { type: [GroupSchema], default: [] },
       day3: { type: [GroupSchema], default: [] },
+      day4: { type: [GroupSchema], default: [] },
     },
   },
   { timestamps: true }

@@ -134,7 +134,7 @@ export default function WordSearch2() {
 
   const dayKey = useMemo(() => {
     const v = String(rawFromSettings).toLowerCase();
-    return ["day1", "day2", "day3"].includes(v) ? v : "day1";
+    return ["day1", "day2", "day3", "day4"].includes(v) ? v : "day1";
   }, [rawFromSettings]);
 
   // Keys per day (v3 to invalidate previous caches)
@@ -302,13 +302,7 @@ export default function WordSearch2() {
       score,
     };
     localStorage.setItem(KEYS.state, JSON.stringify(payload));
-  }, [
-    foundWords,
-    foundCells,
-    score,
-    alreadySubmitted,
-    KEYS.state,
-  ]);
+  }, [foundWords, foundCells, score, alreadySubmitted, KEYS.state]);
 
   /* ---------- Native touchmove with intent detection ---------- */
   useEffect(() => {
@@ -749,5 +743,3 @@ export default function WordSearch2() {
     </Box>
   );
 }
-
-

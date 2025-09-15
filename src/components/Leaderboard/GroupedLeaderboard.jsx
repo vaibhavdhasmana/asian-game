@@ -143,12 +143,13 @@ export default function GroupedLeaderboard({ day }) {
                           sx={{
                             position: "absolute",
                             right: "-14px",
-                            top: { xs: "-2px", md: "2px" },
+                            top: { xs: "-3px", md: "-2px" },
                           }}
                         >
                           <Chip
                             label={`${m.total} pts`}
                             color={isMe ? "warning" : "default"}
+                            sx={{ height: "28px" }}
                           />
                         </Box>
                       </Box>
