@@ -54,7 +54,7 @@ const DAY_CFG = {
   day1: { image: jigsawDay1, pointsPerTile: 6.25, timerSeconds: 180 },
   day2: { image: jigsawDay2, pointsPerTile: 6.25, timerSeconds: 180 },
   day3: { image: jigsawDay3, pointsPerTile: 6.25, timerSeconds: 180 },
-  day4: { image: jigsawDay4, pointsPerTile: 6.25, timerSeconds: 180 },
+  day4: { image: jigsawDay4, pointsPerTile: 6.25, timerSeconds: 140 },
 };
 
 /* ==============================
